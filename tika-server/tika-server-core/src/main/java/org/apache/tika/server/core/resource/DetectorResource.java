@@ -19,15 +19,10 @@ package org.apache.tika.server.core.resource;
 import java.io.IOException;
 import java.io.InputStream;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.UriInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
@@ -35,8 +30,9 @@ import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.server.core.ServerStatus;
+import org.apache.tika.server.core.web.RequestContext;
 
-@Path("/detect")
+@RequestMapping("/detect")
 public class DetectorResource {
     private static final Logger LOG = LoggerFactory.getLogger(DetectorResource.class);
     private final ServerStatus serverStatus;
@@ -45,22 +41,19 @@ public class DetectorResource {
         this.serverStatus = serverStatus;
     }
 
-    @PUT
-    @Path("stream")
-    @Consumes("*/*")
-    @Produces("text/plain")
-    public String detect(final InputStream is, @Context HttpHeaders httpHeaders, @Context final UriInfo info) {
+    @PutMapping(path = "stream", consumes = "*/*", produces = "text/plain")
+    public String detect(final InputStream is, RequestContext request) {
         Metadata met = new Metadata();
 
-        String filename = TikaResource.detectFilename(httpHeaders.getRequestHeaders());
+        String filename = TikaResource.detectFilename(request.getHeaders());
         LOG.info("Detecting media type for Filename: {}", filename);
         met.add(TikaCoreProperties.RESOURCE_NAME_KEY, filename);
         ParseContext parseContext = new ParseContext();
-        TikaResource.fillParseContext(httpHeaders.getRequestHeaders(), met, parseContext);
+        TikaResource.fillParseContext(request.getHeaders(), met, parseContext);
         long timeoutMillis = TikaResource.getTaskTimeout(parseContext);
         long taskId = serverStatus.start(ServerStatus.TASK.DETECT, filename, timeoutMillis);
 
-        try (TikaInputStream tis = TikaInputStream.get(TikaResource.getInputStream(is, met, httpHeaders, info))) {
+        try (TikaInputStream tis = TikaInputStream.get(TikaResource.getInputStream(is, met, request))) {
             return TikaResource
                     .getConfig()
                     .getDetector()

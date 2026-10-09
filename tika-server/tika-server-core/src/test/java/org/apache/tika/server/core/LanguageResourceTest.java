@@ -23,17 +23,16 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.LanguageResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.TarWriter;
 import org.apache.tika.server.core.writer.ZipWriter;
 
-public class LanguageResourceTest extends CXFTestBase {
+public class LanguageResourceTest extends TikaServerTestBase {
 
     private static final String LANG_PATH = "/language";
     private static final String LANG_STREAM_PATH = LANG_PATH + "/stream";
@@ -42,19 +41,18 @@ public class LanguageResourceTest extends CXFTestBase {
     private static final String FRENCH_STRING = "c’est comme ci comme ça";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(LanguageResource.class);
-        sf.setResourceProvider(LanguageResource.class, new SingletonResourceProvider(new LanguageResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new LanguageResource());
 
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TarWriter());
         providers.add(new ZipWriter());
         providers.add(new TikaServerParseExceptionMapper(false));
-        sf.setProviders(providers);
+        addProviders(sf, providers);
 
     }
 

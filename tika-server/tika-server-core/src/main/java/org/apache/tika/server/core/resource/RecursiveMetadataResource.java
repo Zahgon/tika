@@ -23,21 +23,14 @@ import static org.apache.tika.server.core.resource.TikaResource.getConfig;
 import java.io.InputStream;
 import java.util.List;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
-import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.listfilter.MetadataListFilter;
@@ -49,15 +42,18 @@ import org.apache.tika.sax.BasicContentHandlerFactory;
 import org.apache.tika.sax.RecursiveParserWrapperHandler;
 import org.apache.tika.server.core.MetadataList;
 import org.apache.tika.server.core.TikaServerParseException;
+import org.apache.tika.server.core.web.Attachment;
+import org.apache.tika.server.core.web.HttpStatusException;
+import org.apache.tika.server.core.web.RequestContext;
 
-@Path("/rmeta")
+@RequestMapping("/rmeta")
 public class RecursiveMetadataResource {
 
     protected static final String HANDLER_TYPE_PARAM = "handler";
     protected static final BasicContentHandlerFactory.HANDLER_TYPE DEFAULT_HANDLER_TYPE = BasicContentHandlerFactory.HANDLER_TYPE.XML;
     private static final Logger LOG = LoggerFactory.getLogger(RecursiveMetadataResource.class);
 
-    public static List<Metadata> parseMetadata(InputStream is, Metadata metadata, MultivaluedMap<String, String> httpHeaders, UriInfo info, HandlerConfig handlerConfig)
+    public static List<Metadata> parseMetadata(InputStream is, Metadata metadata, MultiValueMap<String, String> httpHeaders, RequestContext request, HandlerConfig handlerConfig)
             throws Exception {
 
         final ParseContext context = new ParseContext();
@@ -79,7 +75,7 @@ public class RecursiveMetadataResource {
         } catch (TikaServerParseException e) {
             //do nothing
             LOG.debug("server parse exception", e);
-        } catch (SecurityException | WebApplicationException e) {
+        } catch (SecurityException | HttpStatusException e) {
             throw e;
         } catch (Exception e) {
             //we shouldn't get here?
@@ -89,7 +85,7 @@ public class RecursiveMetadataResource {
         return metadataListFilter.filter(handler.getMetadataList());
     }
 
-    static HandlerConfig buildHandlerConfig(MultivaluedMap<String, String> httpHeaders, String handlerTypeName, HandlerConfig.PARSE_MODE parseMode) {
+    static HandlerConfig buildHandlerConfig(MultiValueMap<String, String> httpHeaders, String handlerTypeName, HandlerConfig.PARSE_MODE parseMode) {
         int writeLimit = -1;
         if (httpHeaders.containsKey("writeLimit")) {
             writeLimit = Integer.parseInt(httpHeaders.getFirst("writeLimit"));
@@ -123,20 +119,15 @@ public class RecursiveMetadataResource {
      * /rmeta/form/ignore (don't record any content)<br/>
      *
      * @param att             attachment
-     * @param info            uri info
+     * @param request         the request
      * @param handlerTypeName which type of handler to use
      * @return InputStream that can be deserialized as a list of {@link Metadata} objects
      * @throws Exception
      */
-    @POST
-    @Consumes("multipart/form-data")
-    @Produces({"application/json"})
-    @Path("form{" + HANDLER_TYPE_PARAM + " : (\\w+)?}")
-    public Response getMetadataFromMultipart(Attachment att, @Context UriInfo info, @PathParam(HANDLER_TYPE_PARAM) String handlerTypeName) throws Exception {
-        return Response
-                .ok(parseMetadataToMetadataList(att.getObject(InputStream.class), new Metadata(), att.getHeaders(), info,
-                        buildHandlerConfig(att.getHeaders(), handlerTypeName, HandlerConfig.PARSE_MODE.RMETA)))
-                .build();
+    @PostMapping(path = "form{" + HANDLER_TYPE_PARAM + " : (\\w+)?}", consumes = "multipart/form-data", produces = {"application/json"})
+    public ResponseEntity<?> getMetadataFromMultipart(Attachment att, RequestContext request, @PathVariable(HANDLER_TYPE_PARAM) String handlerTypeName) throws Exception {
+        return ResponseEntity.ok(parseMetadataToMetadataList(att.getInputStream(), new Metadata(), att.getHeaders(), request,
+                        buildHandlerConfig(att.getHeaders(), handlerTypeName, HandlerConfig.PARSE_MODE.RMETA)));
     }
 
     /**
@@ -158,25 +149,22 @@ public class RecursiveMetadataResource {
      * /rmeta/md     (store the content as markdown)<br/>
      * /rmeta/ignore (don't record any content)<br/>
      *
-     * @param info            uri info
+     * @param request         the request
      * @param handlerTypeName which type of handler to use
      * @return InputStream that can be deserialized as a list of {@link Metadata} objects
      * @throws Exception
      */
 
-    @PUT
-    @Produces("application/json")
-    @Path("{" + HANDLER_TYPE_PARAM + " : (\\w+)?}")
-    public Response getMetadata(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info, @PathParam(HANDLER_TYPE_PARAM) String handlerTypeName) throws Exception {
+    @PutMapping(path = "{" + HANDLER_TYPE_PARAM + " : (\\w+)?}", produces = "application/json")
+    public ResponseEntity<?> getMetadata(InputStream is, RequestContext request, @PathVariable(HANDLER_TYPE_PARAM) String handlerTypeName) throws Exception {
         Metadata metadata = new Metadata();
-        return Response
-                .ok(parseMetadataToMetadataList(TikaResource.getInputStream(is, metadata, httpHeaders, info), metadata, httpHeaders.getRequestHeaders(), info,
-                        buildHandlerConfig(httpHeaders.getRequestHeaders(), handlerTypeName, HandlerConfig.PARSE_MODE.RMETA)))
-                .build();
+        return ResponseEntity.ok(parseMetadataToMetadataList(TikaResource.getInputStream(is, metadata, request), metadata, request.getHeaders(), request,
+                        buildHandlerConfig(request.getHeaders(), handlerTypeName, HandlerConfig.PARSE_MODE.RMETA)));
     }
 
-    private MetadataList parseMetadataToMetadataList(InputStream is, Metadata metadata, MultivaluedMap<String, String> httpHeaders, UriInfo info, HandlerConfig handlerConfig)
+    private MetadataList parseMetadataToMetadataList(InputStream is, Metadata metadata, MultiValueMap<String, String> httpHeaders, RequestContext request,
+                                                     HandlerConfig handlerConfig)
             throws Exception {
-        return new MetadataList(parseMetadata(is, metadata, httpHeaders, info, handlerConfig));
+        return new MetadataList(parseMetadata(is, metadata, httpHeaders, request, handlerConfig));
     }
 }

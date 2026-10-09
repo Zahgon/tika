@@ -20,38 +20,36 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.Tika;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.DetectorResource;
 import org.apache.tika.server.core.resource.MetadataResource;
 import org.apache.tika.server.core.resource.TikaVersion;
 import org.apache.tika.server.core.resource.TikaWelcome;
+import org.apache.tika.server.core.web.TikaWebSettings;
 
-public class TikaWelcomeTest extends CXFTestBase {
+public class TikaWelcomeTest extends TikaServerTestBase {
     protected static final String WELCOME_PATH = "/";
     protected static final String PATH_RESOURCE = "/detect/stream"; // TIKA-1567
     protected static final String PATH_RESOURCE_2 = "/meta/form"; //TIKA-1567
     private static final String VERSION_PATH = TikaVersionTest.VERSION_PATH;
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        List<ResourceProvider> rpsCore = new ArrayList<>();
-        rpsCore.add(new SingletonResourceProvider(new TikaVersion()));
-        rpsCore.add(new SingletonResourceProvider(new DetectorResource(new ServerStatus("", 0))));
-        rpsCore.add(new SingletonResourceProvider(new MetadataResource()));
-        List<ResourceProvider> all = new ArrayList<>(rpsCore);
-        all.add(new SingletonResourceProvider(new TikaWelcome(rpsCore)));
-        sf.setResourceProviders(all);
+    protected void setUpResources(TikaWebSettings sf) {
+        List<Object> rpsCore = new ArrayList<>();
+        rpsCore.add(new TikaVersion());
+        rpsCore.add(new DetectorResource(new ServerStatus("", 0)));
+        rpsCore.add(new MetadataResource());
+        List<Object> all = new ArrayList<>(rpsCore);
+        all.add(new TikaWelcome(rpsCore));
+        sf.getResources().addAll(all);
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
     }
 
     @Test

@@ -18,34 +18,37 @@ package org.apache.tika.server.core;
 
 import java.io.IOException;
 
-import jakarta.ws.rs.container.ContainerRequestContext;
-import jakarta.ws.rs.container.ContainerRequestFilter;
-import jakarta.ws.rs.container.PreMatching;
-import jakarta.ws.rs.ext.Provider;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.filter.OncePerRequestFilter;
 
-@Provider
-@PreMatching
-public class TikaLoggingFilter implements ContainerRequestFilter {
+/**
+ * Logs the URI of every request, before it is matched to an endpoint.
+ */
+public class TikaLoggingFilter extends OncePerRequestFilter {
     private static final Logger LOG = LoggerFactory.getLogger(TikaLoggingFilter.class);
-
-    private boolean infoLevel;
+    private final boolean infoLevel;
 
     public TikaLoggingFilter(boolean infoLevel) {
         this.infoLevel = infoLevel;
     }
 
     @Override
-    public void filter(ContainerRequestContext requestContext) throws IOException {
-        String requestUri = requestContext
-                .getUriInfo()
-                .getRequestUri()
-                .toString();
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+        StringBuffer url = request.getRequestURL();
+        if (request.getQueryString() != null) {
+            url.append('?').append(request.getQueryString());
+        }
+        String requestUri = url.toString();
         if (infoLevel) {
             LOG.info("Request URI: {}", requestUri);
         } else {
             LOG.debug("Request URI: {}", requestUri);
         }
+        chain.doFilter(request, response);
     }
 }

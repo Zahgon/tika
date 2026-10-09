@@ -25,11 +25,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -38,15 +34,17 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.serialization.JsonMetadataList;
-import org.apache.tika.server.core.CXFTestBase;
 import org.apache.tika.server.core.FetcherStreamFactory;
 import org.apache.tika.server.core.InputStreamFactory;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.RecursiveMetadataResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.MetadataListMessageBodyWriter;
 
-
 @Disabled("turn into actual unit tests -- this relies on network connectivity...bad")
-public class FetcherTest extends CXFTestBase {
+public class FetcherTest extends TikaServerTestBase {
 
     private static final String META_PATH = "/rmeta";
     private static final String TEXT_PATH = "/text";
@@ -54,16 +52,15 @@ public class FetcherTest extends CXFTestBase {
     private static final String TEST_RECURSIVE_DOC = "test-documents/test_recursive_embedded.docx";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(RecursiveMetadataResource.class);
-        sf.setResourceProvider(RecursiveMetadataResource.class, new SingletonResourceProvider(new RecursiveMetadataResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new RecursiveMetadataResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new MetadataListMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Override

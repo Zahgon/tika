@@ -16,8 +16,8 @@
  */
 package org.apache.tika.server.core.config;
 
-import jakarta.ws.rs.core.MultivaluedMap;
 import org.apache.commons.lang3.Strings;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.extractor.DocumentSelector;
 import org.apache.tika.metadata.Metadata;
@@ -29,7 +29,7 @@ public class DocumentSelectorConfig implements ParseContextConfig {
     public static final String X_TIKA_SKIP_EMBEDDED_HEADER = "X-Tika-Skip-Embedded";
 
     @Override
-    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata mtadata, ParseContext context) {
+    public void configure(MultiValueMap<String, String> httpHeaders, Metadata mtadata, ParseContext context) {
         DocumentSelector documentSelector = null;
         for (String key : httpHeaders.keySet()) {
             if (Strings.CS.endsWith(key, X_TIKA_SKIP_EMBEDDED_HEADER)) {

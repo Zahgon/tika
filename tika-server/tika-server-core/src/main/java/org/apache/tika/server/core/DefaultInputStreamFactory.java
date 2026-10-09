@@ -19,10 +19,8 @@ package org.apache.tika.server.core;
 import java.io.IOException;
 import java.io.InputStream;
 
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.UriInfo;
-
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.server.core.web.RequestContext;
 
 /**
  * Passthrough -- returns InputStream as is
@@ -30,7 +28,7 @@ import org.apache.tika.metadata.Metadata;
 public class DefaultInputStreamFactory implements InputStreamFactory {
 
     @Override
-    public InputStream getInputStream(InputStream is, Metadata metadata, HttpHeaders httpHeaders, UriInfo uriInfo) throws IOException {
+    public InputStream getInputStream(InputStream is, Metadata metadata, RequestContext request) throws IOException {
         return is;
     }
 }

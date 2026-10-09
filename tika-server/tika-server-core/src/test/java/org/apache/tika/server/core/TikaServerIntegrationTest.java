@@ -30,23 +30,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.ProcessingException;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
-import org.apache.cxf.configuration.jsse.TLSClientParameters;
-import org.apache.cxf.configuration.jsse.TLSParameterJaxBUtils;
-import org.apache.cxf.configuration.security.KeyManagersType;
-import org.apache.cxf.configuration.security.KeyStoreType;
-import org.apache.cxf.configuration.security.TrustManagersType;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.transport.http.HTTPConduit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -57,6 +53,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.serialization.JsonMetadataList;
+import org.apache.tika.server.core.client.ProcessingException;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.config.TimeoutConfig;
 import org.apache.tika.utils.ProcessUtils;
 
@@ -214,7 +213,7 @@ public class TikaServerIntegrationTest extends IntegrationTestBase {
                 .create(endPoint + STATUS_PATH)
                 .accept("application/json")
                 .get();
-        String jsonString = CXFTestBase.getStringFromInputStream((InputStream) response.getEntity());
+        String jsonString = TikaServerTestBase.getStringFromInputStream((InputStream) response.getEntity());
         JsonNode root = new ObjectMapper().readTree(jsonString);
         return root
                 .get("server_id")
@@ -226,7 +225,7 @@ public class TikaServerIntegrationTest extends IntegrationTestBase {
                 .create(endPoint + STATUS_PATH)
                 .accept("application/json")
                 .get();
-        String jsonString = CXFTestBase.getStringFromInputStream((InputStream) response.getEntity());
+        String jsonString = TikaServerTestBase.getStringFromInputStream((InputStream) response.getEntity());
         JsonNode root = new ObjectMapper().readTree(jsonString);
         return root
                 .get("num_restarts")
@@ -452,47 +451,31 @@ public class TikaServerIntegrationTest extends IntegrationTestBase {
     }
 
     private void configure2WayTLS(WebClient webClient) throws GeneralSecurityException, IOException {
-        HTTPConduit conduit = WebClient
-                .getConfig(webClient)
-                .getHttpConduit();
-        KeyStoreType keystore = new KeyStoreType();
-        keystore.setType("PKCS12");
-        keystore.setPassword("tika-secret");
-        keystore.setFile(getSSL("tika-client-keystore.p12"));
-        KeyManagersType kmt = new KeyManagersType();
-        kmt.setKeyStore(keystore);
-        kmt.setKeyPassword("tika-secret");
-        TLSClientParameters parameters = new TLSClientParameters();
-        parameters.setKeyManagers(TLSParameterJaxBUtils.getKeyManagers(kmt));
-
-        KeyStoreType trustKeyStore = new KeyStoreType();
-        trustKeyStore.setType("PKCS12");
-        trustKeyStore.setPassword("tika-secret");
-        trustKeyStore.setFile(getSSL("tika-client-truststore.p12"));
-
-        TrustManagersType tmt = new TrustManagersType();
-        tmt.setKeyStore(trustKeyStore);
-        parameters.setTrustManagers(TLSParameterJaxBUtils.getTrustManagers(tmt, true));
-
-        conduit.setTlsClientParameters(parameters);
-
+        KeyManagerFactory keyManagers = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagers.init(loadKeyStore("tika-client-keystore.p12"), "tika-secret".toCharArray());
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(keyManagers.getKeyManagers(), trustManagers(), null);
+        webClient.sslContext(context);
     }
 
     private void configure1WayTLS(WebClient webClient) throws GeneralSecurityException, IOException {
-        HTTPConduit conduit = WebClient
-                .getConfig(webClient)
-                .getHttpConduit();
-        TLSClientParameters parameters = new TLSClientParameters();
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, trustManagers(), null);
+        webClient.sslContext(context);
+    }
 
-        KeyStoreType trustKeyStore = new KeyStoreType();
-        trustKeyStore.setType("PKCS12");
-        trustKeyStore.setPassword("tika-secret");
-        trustKeyStore.setFile(getSSL("tika-client-truststore.p12"));
+    private TrustManager[] trustManagers() throws GeneralSecurityException, IOException {
+        TrustManagerFactory trustManagers = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagers.init(loadKeyStore("tika-client-truststore.p12"));
+        return trustManagers.getTrustManagers();
+    }
 
-        TrustManagersType tmt = new TrustManagersType();
-        tmt.setKeyStore(trustKeyStore);
-        parameters.setTrustManagers(TLSParameterJaxBUtils.getTrustManagers(tmt, true));
-        conduit.setTlsClientParameters(parameters);
+    private KeyStore loadKeyStore(String name) throws GeneralSecurityException, IOException {
+        KeyStore store = KeyStore.getInstance("PKCS12");
+        try (InputStream is = Files.newInputStream(Paths.get(getSSL(name)))) {
+            store.load(is, "tika-secret".toCharArray());
+        }
+        return store;
     }
 
     @Test

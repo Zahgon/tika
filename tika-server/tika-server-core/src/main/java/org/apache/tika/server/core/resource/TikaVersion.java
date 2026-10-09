@@ -16,13 +16,12 @@
  */
 package org.apache.tika.server.core.resource;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.Tika;
 
-@Path("/version")
+@RequestMapping("/version")
 public class TikaVersion {
     private Tika tika;
 
@@ -30,8 +29,7 @@ public class TikaVersion {
         this.tika = new Tika(TikaResource.getConfig());
     }
 
-    @GET
-    @Produces("text/plain")
+    @GetMapping(produces = "text/plain")
     public String getVersion() {
         TikaResource.checkIsOperating();
         return tika.toString();

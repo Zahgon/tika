@@ -19,43 +19,35 @@ package org.apache.tika.server.core.writer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyWriter;
-import jakarta.ws.rs.ext.Provider;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
 import org.apache.tika.metadata.Metadata;
 
-@Provider
-@Produces("text/csv")
-public class CSVMessageBodyWriter implements MessageBodyWriter<Metadata> {
+/**
+ * Writes {@link Metadata} as CSV: one record per name, the name followed by its values.
+ */
+public class CSVMessageBodyWriter extends AbstractTikaServerWriter<Metadata> {
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return Metadata.class.isAssignableFrom(type);
+    public CSVMessageBodyWriter() {
+        super(MediaType.valueOf("text/csv"));
     }
 
-    public long getSize(Metadata data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
+    @Override
+    protected boolean supports(Class<?> clazz) {
+        return Metadata.class.isAssignableFrom(clazz);
     }
 
     @Override
     @SuppressWarnings("resource")
-    public void writeTo(Metadata metadata, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
-
-        CSVPrinter writer = new CSVPrinter(new OutputStreamWriter(entityStream, UTF_8), CSVFormat.EXCEL);
-
+    protected void writeInternal(Metadata metadata, HttpOutputMessage outputMessage) throws IOException {
+        CSVPrinter writer = new CSVPrinter(new OutputStreamWriter(outputMessage.getBody(), UTF_8), CSVFormat.EXCEL);
         for (String name : metadata.names()) {
             String[] values = metadata.getValues(name);
             ArrayList<String> list = new ArrayList<>(values.length + 1);
@@ -63,7 +55,6 @@ public class CSVMessageBodyWriter implements MessageBodyWriter<Metadata> {
             list.addAll(Arrays.asList(values));
             writer.printRecord(list);
         }
-
         // Don't close, just flush the stream
         writer.flush();
     }

@@ -27,9 +27,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.CompositeParser;
@@ -43,7 +42,7 @@ import org.apache.tika.server.core.HTMLHelper;
  * Apache Tika, similar to <em>--list-parsers</em> and
  * <em>--list-parser-details</em> within the Tika CLI.
  */
-@Path("/parsers")
+@RequestMapping("/parsers")
 public class TikaParsers {
     private static final ParseContext EMPTY_PC = new ParseContext();
     private HTMLHelper html;
@@ -52,15 +51,12 @@ public class TikaParsers {
         this.html = new HTMLHelper();
     }
 
-    @GET
-    @Path("/details")
-    @Produces("text/html")
+    @GetMapping(path = "/details", produces = "text/html")
     public String getParserDetailsHTML() {
         return getParsersHTML(true);
     }
 
-    @GET
-    @Produces("text/html")
+    @GetMapping(produces = "text/html")
     public String getParsersHTML() {
         return getParsersHTML(false);
     }
@@ -118,15 +114,12 @@ public class TikaParsers {
         html.append("\n");
     }
 
-    @GET
-    @Path("/details")
-    @Produces(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+    @GetMapping(path = "/details", produces = "application/json")
     public String getParserDetailsJSON() throws IOException {
         return getParsersJSON(true);
     }
 
-    @GET
-    @Produces(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+    @GetMapping(produces = "application/json")
     public String getParsersJSON() throws IOException {
         return getParsersJSON(false);
     }
@@ -164,15 +157,12 @@ public class TikaParsers {
         }
     }
 
-    @GET
-    @Path("/details")
-    @Produces("text/plain")
+    @GetMapping(path = "/details", produces = "text/plain")
     public String getParserDetailssPlain() {
         return getParsersPlain(true);
     }
 
-    @GET
-    @Produces("text/plain")
+    @GetMapping(produces = "text/plain")
     public String getParsersPlain() {
         return getParsersPlain(false);
     }

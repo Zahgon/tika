@@ -29,11 +29,12 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.Filter;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
@@ -41,25 +42,29 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.io.IOUtils;
-import org.apache.cxf.binding.BindingFactoryManager;
-import org.apache.cxf.endpoint.Server;
-import org.apache.cxf.jaxrs.JAXRSBindingFactory;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.transport.common.gzip.GZIPInInterceptor;
-import org.apache.cxf.transport.common.gzip.GZIPOutInterceptor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.http.converter.HttpMessageConverter;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.parser.digestutils.CommonsDigester;
 import org.apache.tika.server.core.resource.TikaResource;
 import org.apache.tika.server.core.resource.UnpackerResource;
+import org.apache.tika.server.core.web.ExceptionMapper;
+import org.apache.tika.server.core.web.ResponseFilter;
+import org.apache.tika.server.core.web.TikaWebApplication;
+import org.apache.tika.server.core.web.TikaWebSettings;
 
-public abstract class CXFTestBase {
+/**
+ * Starts a tika-server web application with the resources and providers a test sets up, on
+ * {@link #endPoint}, before each test, and stops it after.
+ */
+public abstract class TikaServerTestBase {
     protected static final int testPort = TestPortAllocator.findFreePort();
     protected static final String endPoint = "http://localhost:" + testPort;
     protected final static int DIGESTER_READ_LIMIT = 20 * 1024 * 1024;
-    protected Server server;
+    protected ConfigurableApplicationContext server;
     protected TikaConfig tika;
 
     public static void assertContains(String needle, String haystack) {
@@ -124,25 +129,10 @@ public abstract class CXFTestBase {
         TikaServerConfig tikaServerConfig = getTikaServerConfig();
         TikaResource.init(tika, tikaServerConfig, new CommonsDigester(DIGESTER_READ_LIMIT, "md5," + "sha1:32"), getInputStreamFactory(getTikaConfigInputStream()),
                 new ServerStatus("", 0, true));
-        JAXRSServerFactoryBean sf = new JAXRSServerFactoryBean();
-        //set compression interceptors
-        sf.setOutInterceptors(Collections.singletonList(new GZIPOutInterceptor()));
-        sf.setInInterceptors(Collections.singletonList(new GZIPInInterceptor()));
-
+        TikaWebSettings sf = new TikaWebSettings().setComparator(new ProduceTypeResourceComparator());
         setUpResources(sf);
         setUpProviders(sf);
-        sf.setAddress(endPoint + "/");
-        sf.setResourceComparator(new ProduceTypeResourceComparator());
-
-        BindingFactoryManager manager = sf
-                .getBus()
-                .getExtension(BindingFactoryManager.class);
-
-        JAXRSBindingFactory factory = new JAXRSBindingFactory();
-        factory.setBus(sf.getBus());
-
-        manager.registerBindingFactory(JAXRSBindingFactory.JAXRS_BINDING_ID, factory);
-        server = sf.create();
+        server = TikaWebApplication.start(sf, Map.of("server.port", Integer.toString(testPort), "server.address", "localhost"));
     }
 
     protected TikaServerConfig getTikaServerConfig() {
@@ -162,21 +152,40 @@ public abstract class CXFTestBase {
     }
 
     /**
-     * Have the test do {@link JAXRSServerFactoryBean#setResourceClasses(Class...)}
-     * and {@link JAXRSServerFactoryBean#setResourceProvider(Class,
-     * org.apache.cxf.jaxrs.lifecycle.ResourceProvider)}
+     * Have the test add its resources to {@link TikaWebSettings#getResources()}
      */
-    protected abstract void setUpResources(JAXRSServerFactoryBean sf);
+    protected abstract void setUpResources(TikaWebSettings sf);
 
     /**
-     * Have the test do {@link JAXRSServerFactoryBean#setProviders(java.util.List)}, if needed
+     * Have the test add its writers, exception mappers and filters, if needed (see {@link #addProviders})
      */
-    protected abstract void setUpProviders(JAXRSServerFactoryBean sf);
+    protected abstract void setUpProviders(TikaWebSettings sf);
+
+    /**
+     * Registers body writers, exception mappers and response filters by their kind.
+     *
+     * @param sf        the settings
+     * @param providers the providers, in order
+     */
+    protected static void addProviders(TikaWebSettings sf, List<?> providers) {
+        for (Object provider : providers) {
+            if (provider instanceof HttpMessageConverter) {
+                sf.getWriters().add((HttpMessageConverter<?>) provider);
+            } else if (provider instanceof ExceptionMapper) {
+                sf.getExceptionMappers().add((ExceptionMapper<?>) provider);
+            } else if (provider instanceof ResponseFilter) {
+                sf.getResponseFilters().add((ResponseFilter) provider);
+            } else if (provider instanceof Filter) {
+                sf.getRequestFilters().add((Filter) provider);
+            } else {
+                throw new IllegalArgumentException("unknown provider " + provider);
+            }
+        }
+    }
 
     @AfterEach
     public void tearDown() throws Exception {
-        server.stop();
-        server.destroy();
+        server.close();
     }
 
     protected Map<String, String> readZipArchive(InputStream inputStream) throws IOException {
@@ -279,11 +288,19 @@ public abstract class CXFTestBase {
         return tmp;
     }
 
+    /**
+     * The average red, green and blue of a region of a rendered image.
+     */
     public static class AverageColor {
         double red;
         double green;
         double blue;
 
+        /**
+         * @param averageRed   the average red component
+         * @param averageGreen the average green component
+         * @param averageBlue  the average blue component
+         */
         public AverageColor(double averageRed, double averageGreen, double averageBlue) {
             this.red = averageRed;
             this.green = averageGreen;

@@ -16,13 +16,13 @@
  */
 package org.apache.tika.server.core;
 
-import jakarta.ws.rs.WebApplicationException;
+import org.apache.tika.server.core.web.HttpStatusException;
 
 /**
  * Simple wrapper exception to be thrown for consistent handling
  * of exceptions that can happen during a parse.
  */
-public class TikaServerParseException extends WebApplicationException {
+public class TikaServerParseException extends HttpStatusException {
 
     public TikaServerParseException(String msg) {
         super(msg);

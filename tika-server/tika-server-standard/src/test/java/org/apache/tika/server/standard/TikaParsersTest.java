@@ -24,31 +24,29 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.gagravarr.tika.OpusParser;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.parser.microsoft.ooxml.OOXMLParser;
 import org.apache.tika.parser.pkg.PackageParser;
-import org.apache.tika.server.core.CXFTestBase;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaParsers;
+import org.apache.tika.server.core.web.TikaWebSettings;
 
-public class TikaParsersTest extends CXFTestBase {
+public class TikaParsersTest extends TikaServerTestBase {
 
     private static final String PARSERS_SUMMARY_PATH = "/parsers";
     private static final String PARSERS_DETAILS_PATH = "/parsers/details";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaParsers.class);
-        sf.setResourceProvider(TikaParsers.class, new SingletonResourceProvider(new TikaParsers()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaParsers());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
     }
 
     @Override
@@ -130,8 +128,8 @@ public class TikaParsersTest extends CXFTestBase {
         for (boolean details : new boolean[]{false, true}) {
             Response response = WebClient
                     .create(endPoint + getPath(details))
-                    .type(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
-                    .accept(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+                    .type("application/json")
+                    .accept("application/json")
                     .get();
 
             String jsonStr = getStringFromInputStream((InputStream) response.getEntity());

@@ -35,10 +35,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.eval.core.langid.LanguageIDWrapper;
 import org.apache.tika.eval.core.metadata.TikaEvalMetadataFilter;
@@ -57,7 +55,7 @@ import org.apache.tika.server.core.ServerStatusResource;
 import org.apache.tika.server.core.resource.TikaServerResource;
 import org.apache.tika.utils.StringUtils;
 
-@Path("/eval")
+@RequestMapping("/eval")
 public class TikaEvalResource implements TikaServerResource, ServerStatusResource {
 
     public static final String TEXT = "text";
@@ -83,10 +81,7 @@ public class TikaEvalResource implements TikaServerResource, ServerStatusResourc
         TEXT_STATS_CALCULATOR = new CompositeTextStatsCalculator(calcs);
     }
 
-    @PUT
-    @Consumes("application/json")
-    @Produces("application/json")
-    @Path("compare")
+    @PutMapping(path = "compare", consumes = "application/json", produces = "application/json")
     public Map<String, Object> compare(InputStream is) throws Exception {
         JsonNode node = null;
         try (BufferedReader reader = new BufferedReader(
@@ -101,10 +96,7 @@ public class TikaEvalResource implements TikaServerResource, ServerStatusResourc
         return compareText(id, textA, textB, timeoutMillis);
     }
 
-    @PUT
-    @Consumes("application/json")
-    @Produces("application/json")
-    @Path("profile")
+    @PutMapping(path = "profile", consumes = "application/json", produces = "application/json")
     public Map<String, Object> profile(InputStream is) throws Exception {
         JsonNode node = null;
         try (BufferedReader reader = new BufferedReader(

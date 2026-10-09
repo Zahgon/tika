@@ -19,13 +19,12 @@ package org.apache.tika.server.core.resource;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.server.core.ServerStatus;
 
-@Path("/status")
+@RequestMapping("/status")
 public class TikaServerStatus {
     private final ServerStatus serverStatus;
 
@@ -33,8 +32,7 @@ public class TikaServerStatus {
         this.serverStatus = serverStatus;
     }
 
-    @GET
-    @Produces("application/json")
+    @GetMapping(produces = "application/json")
     public Map<String, Object> getStatus() {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("server_id", serverStatus.getServerId());

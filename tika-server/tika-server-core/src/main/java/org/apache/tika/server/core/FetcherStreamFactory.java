@@ -22,12 +22,10 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
@@ -36,6 +34,7 @@ import org.apache.tika.pipes.fetcher.Fetcher;
 import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.pipes.fetcher.RangeFetcher;
 import org.apache.tika.server.core.resource.TikaResource;
+import org.apache.tika.server.core.web.RequestContext;
 
 /**
  * This class looks for &quot;fetcherName&quot; in the http header.  If it is not null
@@ -79,18 +78,18 @@ public class FetcherStreamFactory implements InputStreamFactory {
     }
 
     @Override
-    public InputStream getInputStream(InputStream is, Metadata metadata, HttpHeaders httpHeaders, UriInfo uriInfo) throws IOException {
-        MultivaluedMap params = (uriInfo == null) ? null : uriInfo.getQueryParameters();
-        String fetcherName = getParam("fetcherName", httpHeaders, params);
-        String fetchKey = getParam("fetchKey", httpHeaders, params);
+    public InputStream getInputStream(InputStream is, Metadata metadata, RequestContext request) throws IOException {
+        MultiValueMap<String, String> params = request.getQueryParameters();
+        String fetcherName = getParam("fetcherName", request, params);
+        String fetchKey = getParam("fetchKey", request, params);
         fetchKey = urlDecode(fetchKey);
         if (StringUtils.isBlank(fetchKey)) {
-            fetchKey = getParam("fetchKeyLiteral", httpHeaders, params);
+            fetchKey = getParam("fetchKeyLiteral", request, params);
         }
         ParseContext parseContext = new ParseContext();
-        TikaResource.fillParseContext(httpHeaders.getRequestHeaders(), metadata, parseContext);
-        long fetchRangeStart = getLong(getParam("fetchRangeStart", httpHeaders, params));
-        long fetchRangeEnd = getLong(getParam("fetchRangeEnd", httpHeaders, params));
+        TikaResource.fillParseContext(request.getHeaders(), metadata, parseContext);
+        long fetchRangeStart = getLong(getParam("fetchRangeStart", request, params));
+        long fetchRangeEnd = getLong(getParam("fetchRangeEnd", request, params));
         if (StringUtils.isBlank(fetcherName) != StringUtils.isBlank(fetchKey)) {
             throw new IOException("Must specify both a 'fetcherName' and a 'fetchKey'. I see: " + " fetcherName:" + fetcherName + " and fetchKey:" + fetchKey);
         }
@@ -130,11 +129,11 @@ public class FetcherStreamFactory implements InputStreamFactory {
         return fetchKey;
     }
 
-    private String getParam(String paramName, HttpHeaders httpHeaders, MultivaluedMap uriParams) {
+    private String getParam(String paramName, RequestContext request, MultiValueMap<String, String> uriParams) {
         if (uriParams == null || !uriParams.containsKey(paramName)) {
-            return httpHeaders.getHeaderString(paramName);
+            return request.getHeaderString(paramName);
         }
 
-        return (String) uriParams.getFirst(paramName);
+        return uriParams.getFirst(paramName);
     }
 }

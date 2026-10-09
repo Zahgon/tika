@@ -19,38 +19,32 @@ package org.apache.tika.server.core.writer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyWriter;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.serialization.JsonMetadata;
 
-@Provider
-@Produces(MediaType.APPLICATION_JSON)
-public class JSONMessageBodyWriter implements MessageBodyWriter<Metadata> {
+/**
+ * Writes {@link Metadata} as a JSON object.
+ */
+public class JSONMessageBodyWriter extends AbstractTikaServerWriter<Metadata> {
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return Metadata.class.isAssignableFrom(type);
-    }
-
-    public long getSize(Metadata data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
+    public JSONMessageBodyWriter() {
+        super(MediaType.APPLICATION_JSON);
     }
 
     @Override
-    public void writeTo(Metadata metadata, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
-        try (Writer writer = new OutputStreamWriter(entityStream, UTF_8)) {
+    protected boolean supports(Class<?> clazz) {
+        return Metadata.class.isAssignableFrom(clazz);
+    }
+
+    @Override
+    protected void writeInternal(Metadata metadata, HttpOutputMessage outputMessage) throws IOException {
+        try (Writer writer = new OutputStreamWriter(outputMessage.getBody(), UTF_8)) {
             JsonMetadata.toJson(metadata, writer);
         }
     }

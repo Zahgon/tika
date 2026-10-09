@@ -28,47 +28,44 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.cxf.helpers.IOUtils;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.serialization.JsonMetadata;
-import org.apache.tika.server.core.CXFTestBase;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.MetadataResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.CSVMessageBodyWriter;
 import org.apache.tika.server.core.writer.JSONMessageBodyWriter;
 import org.apache.tika.server.core.writer.TextMessageBodyWriter;
 import org.apache.tika.server.standard.resource.XMPMetadataResource;
 import org.apache.tika.server.standard.writer.XMPMessageBodyWriter;
 
-public class MetadataResourceTest extends CXFTestBase {
+public class MetadataResourceTest extends TikaServerTestBase {
 
     private static final String META_PATH = "/meta";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(MetadataResource.class, XMPMetadataResource.class);
-        sf.setResourceProvider(MetadataResource.class, new SingletonResourceProvider(new MetadataResource()));
-        sf.setResourceProvider(XMPMetadataResource.class, new SingletonResourceProvider(new XMPMetadataResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new MetadataResource());
+        sf.getResources().add(new XMPMetadataResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new JSONMessageBodyWriter());
         providers.add(new CSVMessageBodyWriter());
         providers.add(new XMPMessageBodyWriter());
         providers.add(new TextMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Test
@@ -163,7 +160,7 @@ public class MetadataResourceTest extends CXFTestBase {
                 .accept("application/rdf+xml")
                 .put(ClassLoader.getSystemResourceAsStream(TikaResourceTest.TEST_DOC));
 
-        String result = IOUtils.readStringFromStream((InputStream) response.getEntity());
+        String result = IOUtils.toString((InputStream) response.getEntity(), UTF_8);
         assertContains("<rdf:li>Maxim Valyanskiy</rdf:li>", result);
     }
 
@@ -173,7 +170,7 @@ public class MetadataResourceTest extends CXFTestBase {
         Response response = WebClient
                 .create(endPoint + META_PATH + "/xxx")
                 .type("application/msword")
-                .accept(MediaType.APPLICATION_JSON)
+                .accept("application/json")
                 .put(ClassLoader.getSystemResourceAsStream(TikaResourceTest.TEST_DOC));
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }
@@ -186,7 +183,7 @@ public class MetadataResourceTest extends CXFTestBase {
         Response response = WebClient
                 .create(endPoint + META_PATH + "/Author")
                 .type("application/msword")
-                .accept(MediaType.TEXT_PLAIN)
+                .accept("text/plain")
                 .put(copy(stream, 8000));
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     }
@@ -199,10 +196,10 @@ public class MetadataResourceTest extends CXFTestBase {
         Response response = WebClient
                 .create(endPoint + META_PATH + "/" + TikaCoreProperties.CREATOR.getName())
                 .type("application/msword")
-                .accept(MediaType.TEXT_PLAIN)
+                .accept("text/plain")
                 .put(copy(stream, 12000));
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        String s = IOUtils.readStringFromStream((InputStream) response.getEntity());
+        String s = IOUtils.toString((InputStream) response.getEntity(), UTF_8);
         assertEquals("Maxim Valyanskiy", s);
     }
 
@@ -214,7 +211,7 @@ public class MetadataResourceTest extends CXFTestBase {
         Response response = WebClient
                 .create(endPoint + META_PATH + "/" + TikaCoreProperties.CREATOR.getName())
                 .type("application/msword")
-                .accept(MediaType.APPLICATION_JSON)
+                .accept("application/json")
                 .put(copy(stream, 12000));
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         Metadata metadata = JsonMetadata.fromJson(new InputStreamReader((InputStream) response.getEntity(), UTF_8));
@@ -233,7 +230,7 @@ public class MetadataResourceTest extends CXFTestBase {
                 .accept("application/rdf+xml")
                 .put(copy(stream, 12000));
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        String s = IOUtils.readStringFromStream((InputStream) response.getEntity());
+        String s = IOUtils.toString((InputStream) response.getEntity(), UTF_8);
         assertContains("<rdf:li>Maxim Valyanskiy</rdf:li>", s);
     }
 

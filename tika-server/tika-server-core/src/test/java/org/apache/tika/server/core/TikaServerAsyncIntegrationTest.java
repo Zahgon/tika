@@ -16,7 +16,6 @@
  */
 package org.apache.tika.server.core;
 
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -33,9 +32,7 @@ import java.util.Random;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.FileUtils;
-import org.apache.cxf.jaxrs.client.WebClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -51,6 +48,8 @@ import org.apache.tika.pipes.HandlerConfig;
 import org.apache.tika.pipes.emitter.EmitKey;
 import org.apache.tika.pipes.fetcher.FetchKey;
 import org.apache.tika.serialization.pipes.JsonFetchEmitTupleList;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.utils.ProcessUtils;
 
 @Disabled("useful for development...need to turn it into a real unit test")

@@ -16,22 +16,26 @@
  */
 package org.apache.tika.server.core;
 
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.ext.ExceptionMapper;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import org.apache.tika.exception.EncryptedDocumentException;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.exception.UnsupportedFormatException;
+import org.apache.tika.server.core.web.ExceptionMapper;
+import org.apache.tika.server.core.web.HttpStatusException;
 
-@Provider
+/**
+ * Maps parse failures to their responses: 422 for encrypted, unsupported or unparseable
+ * documents, the wrapped response for HTTP failures, 500 otherwise; with the stack trace as a
+ * plain-text body when the server is configured to return it.
+ */
 public class TikaServerParseExceptionMapper implements ExceptionMapper<TikaServerParseException> {
 
     private final boolean returnStack;
@@ -40,38 +44,44 @@ public class TikaServerParseExceptionMapper implements ExceptionMapper<TikaServe
         this.returnStack = returnStack;
     }
 
-    public Response toResponse(TikaServerParseException e) {
+    @Override
+    public Class<TikaServerParseException> getExceptionType() {
+        return TikaServerParseException.class;
+    }
+
+    @Override
+    public ResponseEntity<?> toResponse(TikaServerParseException e) {
         if (e.getMessage() != null && e
                 .getMessage()
-                .equals(Response.Status.UNSUPPORTED_MEDIA_TYPE.toString())) {
+                .equals(HttpStatus.UNSUPPORTED_MEDIA_TYPE.getReasonPhrase())) {
             return buildResponse(e, 415);
         }
         Throwable cause = e.getCause();
         if (cause == null) {
-            return buildResponse(e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            return buildResponse(e, HttpStatus.INTERNAL_SERVER_ERROR.value());
         } else {
             if (cause instanceof EncryptedDocumentException) {
                 return buildResponse(cause, 422);
             } else if (cause instanceof TikaException) {
                 //unsupported media type
                 Throwable causeOfCause = cause.getCause();
-                if (causeOfCause instanceof WebApplicationException) {
-                    return ((WebApplicationException) causeOfCause).getResponse();
+                if (causeOfCause instanceof HttpStatusException) {
+                    return ((HttpStatusException) causeOfCause).getResponse();
                 }
                 return buildResponse(cause, 422);
             } else if (cause instanceof IllegalStateException) {
                 return buildResponse(cause, 422);
             } else if (cause instanceof UnsupportedFormatException) {
                 return buildResponse(cause, 422);
-            } else if (cause instanceof WebApplicationException) {
-                return ((WebApplicationException) e.getCause()).getResponse();
+            } else if (cause instanceof HttpStatusException) {
+                return ((HttpStatusException) e.getCause()).getResponse();
             } else {
                 return buildResponse(e, 500);
             }
         }
     }
 
-    private Response buildResponse(Throwable cause, int i) {
+    private ResponseEntity<?> buildResponse(Throwable cause, int i) {
         if (returnStack && cause != null) {
             Writer result = new StringWriter();
             PrintWriter writer = new PrintWriter(result);
@@ -81,17 +91,16 @@ public class TikaServerParseExceptionMapper implements ExceptionMapper<TikaServe
                 result.flush();
             } catch (IOException e) {
                 //something went seriously wrong
-                return Response
+                return ResponseEntity
                         .status(500)
                         .build();
             }
-            return Response
+            return ResponseEntity
                     .status(i)
-                    .entity(result.toString())
-                    .type("text/plain")
-                    .build();
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(result.toString());
         } else {
-            return Response
+            return ResponseEntity
                     .status(i)
                     .build();
         }

@@ -111,6 +111,14 @@
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <version>${maven.shade.version}</version>
+        <dependencies>
+          <dependency>
+            <!-- merges the Spring Boot META-INF/spring.factories files -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>${spring-boot.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <phase>package</phase>
@@ -134,11 +142,9 @@
                   <exclude>commons-codec:commons-codec:jar:</exclude>
                   <exclude>org.apache.commons:commons-compress:jar:</exclude>
                   <exclude>org.apache.commons:commons-csv:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-core:jar:</exclude>
                   <exclude>com.fasterxml.woodstox:woodstox-core:jar:</exclude>
                   <exclude>org.codehaus.woodstox:stax2-api:jar:</exclude>
                   <exclude>org.apache.ws.xmlschema:xmlschema-core:jar:</exclude>
-                  <exclude>jakarta.ws.rs:jakarta.ws.rs-api:jar:</exclude>
                   <exclude>jakarta.annotation:jakarta.annotation-api:jar:</exclude>
                   <exclude>org.bouncycastle:bcjmail-jdk18on:jar:</exclude>
                   <exclude>org.bouncycastle:bcutil-jdk18on:jar:</exclude>
@@ -163,8 +169,6 @@
                   <exclude>com.sun.istack:istack-commons-runtime:jar:</exclude>
                   <exclude>com.sun.activation:jakarta.activation:jar:</exclude> <!-- NOT SURA these coordinates are correcte -->
                   <exclude>com.fasterxml.jackson.core:jackson-core:jar:</exclude>
-                  <exclude>com.fasterxml.jackson.jaxrs:jackson-jakarta-rs-json-provider:jar:</exclude>
-                  <exclude>com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:jar:</exclude>
                   <exclude>com.fasterxml.jackson.module:jackson-module-jaxb-annotations:jar:</exclude>
                   <exclude>com.fasterxml.jackson.core:jackson-annotations:jar:</exclude>
                   <exclude>com.fasterxml.jackson.core:jackson-databind:jar:</exclude>
@@ -172,10 +176,8 @@
                   <exclude>org.slf4j:jcl-over-slf4j:jar:</exclude>
                   <exclude>org.slf4j:slf4j-api:jar:</exclude>
                   <exclude>commons-logging:commons-logging:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-rt-rs-client:jar:</exclude>
                   <exclude>org.apache.commons:commons-lang3:jar:</exclude>
                   <exclude>commons-cli:commons-cli:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-rt-rs-security-cors:jar:</exclude>
                   <exclude>org.eclipse.jetty:jetty-io:jar:</exclude>
                   <exclude>org.eclipse.jetty:jetty-util:jar:</exclude>
                   <exclude>org.eclipse.jetty:jetty-http:jar:</exclude>
@@ -183,10 +185,6 @@
                   <exclude>org.eclipse.jetty:jetty-server:jar:</exclude>
                   <exclude>org.eclipse.jetty:jetty-continuation:jar:</exclude>
                   <exclude>javax.servlet:javax.servlet-api:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-rt-transports-http:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-rt-transports-http-jetty:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-rt-security:jar:</exclude>
-                  <exclude>org.apache.cxf:cxf-rt-frontend-jaxrs:jar:</exclude>
                 </excludes>
               </artifactSet>
               <filters>
@@ -243,28 +241,13 @@
                   <resource>META-INF/spring.schemas</resource>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                  <resource>META-INF/cxf/cxf.extension</resource>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
-                  <resource>META-INF/extensions.xml</resource>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
-                  <resource>META-INF/cxf/extensions.xml</resource>
+                  <resource>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</resource>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                  <resource>META-INF/cxf/bus-extensions.txt</resource>
+                  <resource>META-INF/spring/aot.factories</resource>
                 </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
-                  <resource>META-INF/cxf/bus-extensions.xml</resource>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
-                  <resource>META-INF/wsdl.plugin.xml</resource>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
-                  <resource>META-INF/tools.service.validator.xml</resource>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
-                  <resource>META-INF/cxf/java2wsbeans.xml</resource>
+                <transformer implementation="org.springframework.boot.maven.PropertiesMergingResourceTransformer">
+                  <resource>META-INF/spring.factories</resource>
                 </transformer>
               </transformers>
             </configuration>

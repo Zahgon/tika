@@ -24,31 +24,29 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.gagravarr.tika.OggDetector;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.detect.microsoft.POIFSContainerDetector;
 import org.apache.tika.detect.zip.DefaultZipContainerDetector;
 import org.apache.tika.mime.MimeTypes;
-import org.apache.tika.server.core.CXFTestBase;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaDetectors;
+import org.apache.tika.server.core.web.TikaWebSettings;
 
-public class TikaDetectorsTest extends CXFTestBase {
+public class TikaDetectorsTest extends TikaServerTestBase {
 
     private static final String DETECTORS_PATH = "/detectors";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaDetectors.class);
-        sf.setResourceProvider(TikaDetectors.class, new SingletonResourceProvider(new TikaDetectors()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaDetectors());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
     }
 
     @Test
@@ -94,8 +92,8 @@ public class TikaDetectorsTest extends CXFTestBase {
     public void testGetJSON() throws Exception {
         Response response = WebClient
                 .create(endPoint + DETECTORS_PATH)
-                .type(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
-                .accept(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+                .type("application/json")
+                .accept("application/json")
                 .get();
 
         String jsonStr = getStringFromInputStream((InputStream) response.getEntity());

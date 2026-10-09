@@ -16,11 +16,13 @@
  */
 package org.apache.tika.server.core.writer;
 
-import jakarta.ws.rs.ext.MessageBodyWriter;
+import org.springframework.http.converter.HttpMessageConverter;
 
 /**
- * Stub interface to allow for SPI loading from other modules
- * without opening up service loading to any generic MessageBodyWriter
+ * A response body writer of tika-server, loaded by SPI too; writers are tried in
+ * registration order.
+ *
+ * @param <T> the type of entity it writes
  */
-public interface TikaServerWriter<T> extends MessageBodyWriter<T> {
+public interface TikaServerWriter<T> extends HttpMessageConverter<T> {
 }

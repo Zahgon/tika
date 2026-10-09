@@ -23,32 +23,25 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.binding.BindingFactoryManager;
-import org.apache.cxf.endpoint.Server;
-import org.apache.cxf.jaxrs.JAXRSBindingFactory;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
-import org.apache.cxf.transport.common.gzip.GZIPInInterceptor;
-import org.apache.cxf.transport.common.gzip.GZIPOutInterceptor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import org.apache.tika.eval.core.metadata.TikaEvalMetadataFilter;
 import org.apache.tika.server.core.ProduceTypeResourceComparator;
 import org.apache.tika.server.core.ServerStatus;
 import org.apache.tika.server.core.TikaServerConfig;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
+import org.apache.tika.server.core.web.TikaWebApplication;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONObjWriter;
 
 public class TikaEvalResourceTest {
@@ -58,50 +51,31 @@ public class TikaEvalResourceTest {
 
     protected static final String COMPARE_END_POINT = END_POINT + "/eval/compare";
     protected static final String PROFILE_END_POINT = END_POINT + "/eval/profile";
-    protected static Server SERVER;
-
+    protected static ConfigurableApplicationContext SERVER;
     ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeAll
     public static void setUp() throws Exception {
         ServerStatus serverStatus = new ServerStatus("", 0, true);
-        JAXRSServerFactoryBean sf = new JAXRSServerFactoryBean();
-        //set compression interceptors
-        sf.setOutInterceptors(Collections.singletonList(new GZIPOutInterceptor()));
-        sf.setInInterceptors(Collections.singletonList(new GZIPInInterceptor()));
-
+        TikaWebSettings sf = new TikaWebSettings().setComparator(new ProduceTypeResourceComparator());
         setUpResources(sf, serverStatus);
         setUpProviders(sf);
-        sf.setAddress(END_POINT + "/");
-        sf.setResourceComparator(new ProduceTypeResourceComparator());
-
-        BindingFactoryManager manager = sf.getBus().getExtension(BindingFactoryManager.class);
-
-        JAXRSBindingFactory factory = new JAXRSBindingFactory();
-        factory.setBus(sf.getBus());
-
-        manager.registerBindingFactory(JAXRSBindingFactory.JAXRS_BINDING_ID, factory);
-        SERVER = sf.create();
+        SERVER = TikaWebApplication.start(sf, Map.of("server.port", Integer.toString(TikaServerConfig.DEFAULT_PORT), "server.address", "localhost"));
     }
 
     @AfterAll
     public static void tearDown() throws Exception {
-        SERVER.stop();
-        SERVER.destroy();
+        SERVER.close();
     }
 
-    protected static void setUpResources(JAXRSServerFactoryBean sf, ServerStatus serverStatus) {
-        sf.setResourceClasses(TikaEvalResource.class);
+    protected static void setUpResources(TikaWebSettings sf, ServerStatus serverStatus) {
         TikaEvalResource tikaEvalResource = new TikaEvalResource();
         tikaEvalResource.setServerStatus(serverStatus);
-        sf.setResourceProvider(TikaEvalResource.class,
-                new SingletonResourceProvider(tikaEvalResource));
+        sf.getResources().add(tikaEvalResource);
     }
 
-    protected static void setUpProviders(JAXRSServerFactoryBean sf) {
-        List<Object> providers = new ArrayList<>();
-        providers.add(new JSONObjWriter());
-        sf.setProviders(providers);
+    protected static void setUpProviders(TikaWebSettings sf) {
+        sf.getWriters().add(new JSONObjWriter());
     }
 
     @Test

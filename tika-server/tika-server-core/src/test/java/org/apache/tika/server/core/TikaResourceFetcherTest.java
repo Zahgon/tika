@@ -26,38 +26,36 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.pipes.fetcher.FetcherManager;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONMessageBodyWriter;
 
-public class TikaResourceFetcherTest extends CXFTestBase {
+public class TikaResourceFetcherTest extends TikaServerTestBase {
 
     private static final String TIKA_PATH = "/tika";
 
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaResource.class);
-        sf.setResourceProvider(TikaResource.class, new SingletonResourceProvider(new TikaResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TikaServerParseExceptionMapper(false));
         providers.add(new JSONMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Override
@@ -91,9 +89,9 @@ public class TikaResourceFetcherTest extends CXFTestBase {
 
     @Test
     public void testHeader() throws Exception {
-        MultivaluedMap<String, String> map = new MultivaluedHashMap<>();
-        map.putSingle("fetcherName", "fsf");
-        map.putSingle("fetchKey", "mock/hello_world.xml");
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.set("fetcherName", "fsf");
+        map.set("fetchKey", "mock/hello_world.xml");
         Response response = WebClient
                 .create(endPoint + TIKA_PATH)
                 .headers(map)

@@ -23,20 +23,19 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
-import org.apache.tika.server.core.CXFTestBase;
 import org.apache.tika.server.core.ServerStatus;
 import org.apache.tika.server.core.TikaServerParseExceptionMapper;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.DetectorResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.TarWriter;
 import org.apache.tika.server.core.writer.ZipWriter;
 
-public class DetectorResourceTest extends CXFTestBase {
+public class DetectorResourceTest extends TikaServerTestBase {
 
     private static final String DETECT_PATH = "/detect";
     private static final String DETECT_STREAM_PATH = DETECT_PATH + "/stream";
@@ -44,19 +43,18 @@ public class DetectorResourceTest extends CXFTestBase {
     private static final String CDEC_CSV_NO_EXT = "test-documents/CDEC_WEATHER_2010_03_02";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(DetectorResource.class);
-        sf.setResourceProvider(DetectorResource.class, new SingletonResourceProvider(new DetectorResource(new ServerStatus("", 0))));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new DetectorResource(new ServerStatus("", 0)));
 
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TarWriter());
         providers.add(new ZipWriter());
         providers.add(new TikaServerParseExceptionMapper(false));
-        sf.setProviders(providers);
+        addProviders(sf, providers);
 
     }
 

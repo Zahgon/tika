@@ -17,6 +17,7 @@
 package org.apache.tika.server.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStream;
@@ -25,22 +26,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.attachment.AttachmentUtil;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
+import jakarta.activation.CommandMap;
 import org.junit.jupiter.api.Test;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.serialization.JsonMetadata;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONMessageBodyWriter;
 
-public class TikaResourceTest extends CXFTestBase {
+public class TikaResourceTest extends TikaServerTestBase {
 
     public static final String TEST_HELLO_WORLD = "test-documents/mock/hello_world.xml";
     public static final String TEST_HELLO_WORLD_LONG = "test-documents/mock/hello_world_long.xml";
@@ -53,17 +53,16 @@ public class TikaResourceTest extends CXFTestBase {
     private static final int UNPROCESSEABLE = 422;
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaResource.class);
-        sf.setResourceProvider(TikaResource.class, new SingletonResourceProvider(new TikaResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TikaServerParseExceptionMapper(false));
         providers.add(new JSONMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Test
@@ -78,8 +77,8 @@ public class TikaResourceTest extends CXFTestBase {
 
     @Test
     public void testHeaders() throws Exception {
-        MultivaluedMap<String, String> map = new MultivaluedHashMap<>();
-        map.addAll("meta_mymeta", "first", "second", "third");
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.addAll("meta_mymeta", List.of("first", "second", "third"));
         Response response = WebClient
                 .create(endPoint + TIKA_PATH)
                 .headers(map)
@@ -94,9 +93,10 @@ public class TikaResourceTest extends CXFTestBase {
     }
 
     @Test
-    public void testJAXBAndActivationDependency() {
-        //TIKA-2778
-        AttachmentUtil.getCommandMap();
+    public void testJAXBAndActivationDependency() throws Exception {
+        //TIKA-2778: JAXB and activation stay available to the parsers that need them
+        assertNotNull(CommandMap.getDefaultCommandMap());
+        assertNotNull(Class.forName("jakarta.xml.bind.JAXBContext"));
     }
 
     @Test
@@ -129,7 +129,8 @@ public class TikaResourceTest extends CXFTestBase {
                 .accept("text/plain")
                 .get();
         String resp = getStringFromInputStream((InputStream) response.getEntity());
-        assertTrue(resp.startsWith("<application"));
+        // the server does not generate WADL descriptions: the query is ignored like any other
+        assertEquals(TikaResource.GREETING, resp);
     }
 
     @Test

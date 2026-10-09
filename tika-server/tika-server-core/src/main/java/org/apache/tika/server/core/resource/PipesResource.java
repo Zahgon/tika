@@ -24,26 +24,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.UriInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.exception.TikaConfigException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.PipesConfig;
 import org.apache.tika.pipes.PipesException;
 import org.apache.tika.pipes.PipesParser;
 import org.apache.tika.pipes.PipesResult;
 import org.apache.tika.serialization.pipes.JsonFetchEmitTuple;
+import org.apache.tika.server.core.web.RequestContext;
 
-@Path("/pipes")
+@RequestMapping("/pipes")
 public class PipesResource {
 
 
@@ -77,13 +72,12 @@ public class PipesResource {
      * <p>
      * Must specify a fetcherString and an emitter in the posted json.
      *
-     * @param info uri info
+     * @param request the request
      * @return InputStream that can be deserialized as a list of {@link Metadata} objects
      * @throws Exception
      */
-    @POST
-    @Produces("application/json")
-    public Map<String, String> postRmeta(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info) throws Exception {
+    @PostMapping(produces = "application/json")
+    public Map<String, String> postRmeta(InputStream is, RequestContext request) throws Exception {
         FetchEmitTuple t = null;
         try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
             t = JsonFetchEmitTuple.fromJson(reader);

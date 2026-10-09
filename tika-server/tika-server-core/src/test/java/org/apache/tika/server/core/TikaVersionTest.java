@@ -20,26 +20,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.InputStream;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.Tika;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaVersion;
+import org.apache.tika.server.core.web.TikaWebSettings;
 
-public class TikaVersionTest extends CXFTestBase {
+public class TikaVersionTest extends TikaServerTestBase {
     protected static final String VERSION_PATH = "/version";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaVersion.class);
-        sf.setResourceProvider(TikaVersion.class, new SingletonResourceProvider(new TikaVersion()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaVersion());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
     }
 
     @Test

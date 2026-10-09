@@ -19,41 +19,37 @@ package org.apache.tika.server.core.writer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyWriter;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
 import org.apache.tika.serialization.JsonMetadataList;
 import org.apache.tika.server.core.MetadataList;
 
-@Provider
-@Produces(MediaType.APPLICATION_JSON)
-public class MetadataListMessageBodyWriter implements MessageBodyWriter<MetadataList> {
+/**
+ * Writes a {@link MetadataList} as a JSON array, for exactly <code>application/json</code>.
+ */
+public class MetadataListMessageBodyWriter extends AbstractTikaServerWriter<MetadataList> {
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        if (!MediaType.APPLICATION_JSON_TYPE.equals(mediaType)) {
-            return false;
-        }
-        return type.isAssignableFrom(MetadataList.class);
-    }
-
-    public long getSize(MetadataList data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
+    public MetadataListMessageBodyWriter() {
+        super(MediaType.APPLICATION_JSON);
     }
 
     @Override
-    public void writeTo(MetadataList list, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
-        try (Writer writer = new OutputStreamWriter(entityStream, UTF_8)) {
+    protected boolean supports(Class<?> clazz) {
+        return clazz.isAssignableFrom(MetadataList.class);
+    }
+
+    @Override
+    public boolean canWrite(Class<?> clazz, MediaType mediaType) {
+        return MediaType.APPLICATION_JSON.equals(mediaType) && supports(clazz);
+    }
+
+    @Override
+    protected void writeInternal(MetadataList list, HttpOutputMessage outputMessage) throws IOException {
+        try (Writer writer = new OutputStreamWriter(outputMessage.getBody(), UTF_8)) {
             JsonMetadataList.toJson(list.getMetadata(), writer);
         }
     }

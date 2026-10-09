@@ -22,15 +22,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.config.LoadErrorHandler;
 import org.apache.tika.config.ServiceLoader;
@@ -40,7 +38,7 @@ import org.apache.tika.language.detect.LanguageResult;
 import org.apache.tika.language.translate.Translator;
 import org.apache.tika.server.core.ServerStatus;
 
-@Path("/translate")
+@RequestMapping("/translate")
 public class TranslateResource {
     private static final Logger LOG = LoggerFactory.getLogger(TranslateResource.class);
     private final ServerStatus serverStatus;
@@ -58,37 +56,25 @@ public class TranslateResource {
     }
     
     // TIKA-4526: handle @PUT and @POST separately to avoid nondeterministic failures
-    @POST
-    @Path("/all/{translator}/{src}/{dest}")
-    @Consumes("*/*")
-    @Produces("text/plain")
-    public String translatePost(final InputStream is, @PathParam("translator") String translator, @PathParam("src") String sLang, @PathParam("dest") String dLang)
+    @PostMapping(path = "/all/{translator}/{src}/{dest}", consumes = "*/*", produces = "text/plain")
+    public String translatePost(final InputStream is, @PathVariable("translator") String translator, @PathVariable("src") String sLang, @PathVariable("dest") String dLang)
             throws TikaException, IOException {
         return doTranslate(IOUtils.toString(is, UTF_8), translator, sLang, dLang);
     }
 
-    @PUT
-    @Path("/all/{translator}/{src}/{dest}")
-    @Consumes("*/*")
-    @Produces("text/plain")
-    public String translatePut(final InputStream is, @PathParam("translator") String translator, @PathParam("src") String sLang, @PathParam("dest") String dLang)
+    @PutMapping(path = "/all/{translator}/{src}/{dest}", consumes = "*/*", produces = "text/plain")
+    public String translatePut(final InputStream is, @PathVariable("translator") String translator, @PathVariable("src") String sLang, @PathVariable("dest") String dLang)
             throws TikaException, IOException {
         return doTranslate(IOUtils.toString(is, UTF_8), translator, sLang, dLang);
     }
 
-    @POST
-    @Path("/all/{translator}/{dest}")
-    @Consumes("*/*")
-    @Produces("text/plain")
-    public String autoTranslatePost(final InputStream is, @PathParam("translator") String translator, @PathParam("dest") String dLang) throws TikaException, IOException {
+    @PostMapping(path = "/all/{translator}/{dest}", consumes = "*/*", produces = "text/plain")
+    public String autoTranslatePost(final InputStream is, @PathVariable("translator") String translator, @PathVariable("dest") String dLang) throws TikaException, IOException {
         return doAutoTranslate(IOUtils.toString(is, UTF_8), translator, dLang);
     }
 
-    @PUT
-    @Path("/all/{translator}/{dest}")
-    @Consumes("*/*")
-    @Produces("text/plain")
-    public String autoTranslatePut(final InputStream is, @PathParam("translator") String translator, @PathParam("dest") String dLang) throws TikaException, IOException {
+    @PutMapping(path = "/all/{translator}/{dest}", consumes = "*/*", produces = "text/plain")
+    public String autoTranslatePut(final InputStream is, @PathVariable("translator") String translator, @PathVariable("dest") String dLang) throws TikaException, IOException {
         return doAutoTranslate(IOUtils.toString(is, UTF_8), translator, dLang);
     }
 

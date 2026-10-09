@@ -18,7 +18,7 @@ package org.apache.tika.server.core;
 
 import java.util.List;
 
-import jakarta.ws.rs.core.MultivaluedMap;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.config.ServiceLoader;
 import org.apache.tika.metadata.Metadata;
@@ -34,7 +34,7 @@ public class CompositeParseContextConfig implements ParseContextConfig {
     }
 
     @Override
-    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata, ParseContext context) {
+    public void configure(MultiValueMap<String, String> httpHeaders, Metadata metadata, ParseContext context) {
         for (ParseContextConfig config : configs) {
             config.configure(httpHeaders, metadata, context);
         }

@@ -37,7 +37,7 @@
         <level value="warn"/>
         <appender-ref ref="stdout"/>
     </logger>
-    <logger name="org.apache.cxf" additivity="true">
+    <logger name="org.springframework" additivity="true">
         <level value="warn"/>
         <appender-ref ref="stderr"/>
     </logger>

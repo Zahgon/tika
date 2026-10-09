@@ -17,9 +17,10 @@
 package org.apache.tika.server.standard;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.cxf.helpers.HttpHeaderHelper.CONTENT_ENCODING;
+import static org.springframework.http.HttpHeaders.CONTENT_ENCODING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStream;
@@ -31,18 +32,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-import jakarta.ws.rs.ProcessingException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.cxf.attachment.AttachmentUtil;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.ext.multipart.Attachment;
-import org.apache.cxf.jaxrs.ext.multipart.ContentDisposition;
-import org.apache.cxf.jaxrs.ext.multipart.MultipartBody;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
+import jakarta.activation.CommandMap;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.TikaTest;
@@ -51,16 +43,23 @@ import org.apache.tika.metadata.OfficeOpenXMLExtended;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.ocr.TesseractOCRParser;
 import org.apache.tika.serialization.JsonMetadata;
-import org.apache.tika.server.core.CXFTestBase;
 import org.apache.tika.server.core.TikaServerParseExceptionMapper;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Attachment;
+import org.apache.tika.server.core.client.ContentDisposition;
+import org.apache.tika.server.core.client.MultipartBody;
+import org.apache.tika.server.core.client.ProcessingException;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.config.DocumentSelectorConfig;
 import org.apache.tika.server.core.config.PasswordProviderConfig;
 import org.apache.tika.server.core.resource.TikaResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONMessageBodyWriter;
 import org.apache.tika.server.standard.config.PDFServerConfig;
 import org.apache.tika.server.standard.config.TesseractServerConfig;
 
-public class TikaResourceTest extends CXFTestBase {
+public class TikaResourceTest extends TikaServerTestBase {
     public static final String TEST_DOC = "test-documents/test.doc";
     public static final String TEST_PASSWORD_PROTECTED = "test-documents/password.xls";
     private static final String TEST_RECURSIVE_DOC = "test-documents/test_recursive_embedded.docx";
@@ -73,17 +72,16 @@ public class TikaResourceTest extends CXFTestBase {
     private static final int UNPROCESSEABLE = 422;
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaResource.class);
-        sf.setResourceProvider(TikaResource.class, new SingletonResourceProvider(new TikaResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TikaServerParseExceptionMapper(false));
         providers.add(new JSONMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Override
@@ -126,7 +124,7 @@ public class TikaResourceTest extends CXFTestBase {
 
     @Test
     public void testLongGzipOut() throws Exception {
-        //if the output is long enough, jax-rs will compress it, otherwise it won't
+        //if the output is long enough, the server will compress it, otherwise it won't
         //this output is long enough, and should be compressed
         Response response = WebClient
                 .create(endPoint + TIKA_PATH)
@@ -143,7 +141,7 @@ public class TikaResourceTest extends CXFTestBase {
 
     @Test
     public void testShortGzipOut() throws Exception {
-        //if the output is long enough, jax-rs will compress it, otherwise it won't
+        //if the output is long enough, the server will compress it, otherwise it won't
         //this output is short enough, and should not be compressed
         Response response = WebClient
                 .create(endPoint + TIKA_PATH)
@@ -273,9 +271,10 @@ public class TikaResourceTest extends CXFTestBase {
     }
 
     @Test
-    public void testJAXBAndActivationDependency() {
-        //TIKA-2778
-        AttachmentUtil.getCommandMap();
+    public void testJAXBAndActivationDependency() throws Exception {
+        //TIKA-2778: JAXB and activation stay available to the parsers that need them
+        assertNotNull(CommandMap.getDefaultCommandMap());
+        assertNotNull(Class.forName("jakarta.xml.bind.JAXBContext"));
     }
 
     @Test
@@ -594,8 +593,8 @@ public class TikaResourceTest extends CXFTestBase {
         Response response = WebClient
                 .create(endPoint + TIKA_POST_PATH)
                 .type("application/pdf")
-                .accept(MediaType.TEXT_PLAIN)
-                .type(MediaType.MULTIPART_FORM_DATA)
+                .accept("text/plain")
+                .type("multipart/form-data")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX.toLowerCase(Locale.ROOT) + "ocrstrategy", "no_ocr")
                 .post(testPDFLowerCaseOCRConfigPOSTBody());
         String responseMsg = getStringFromInputStream((InputStream) response.getEntity());
@@ -605,8 +604,8 @@ public class TikaResourceTest extends CXFTestBase {
         response = WebClient
                 .create(endPoint + TIKA_POST_PATH)
                 .type("application/pdf")
-                .accept(MediaType.TEXT_PLAIN)
-                .type(MediaType.MULTIPART_FORM_DATA)
+                .accept("text/plain")
+                .type("multipart/form-data")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX.toLowerCase(Locale.ROOT) + "ocrstrategy", "ocr_only")
                 .post(testPDFLowerCaseOCRConfigPOSTBody());
         responseMsg = getStringFromInputStream((InputStream) response.getEntity());
@@ -616,8 +615,8 @@ public class TikaResourceTest extends CXFTestBase {
         response = WebClient
                 .create(endPoint + TIKA_POST_PATH)
                 .type("application/pdf")
-                .accept(MediaType.TEXT_PLAIN)
-                .type(MediaType.MULTIPART_FORM_DATA)
+                .accept("text/plain")
+                .type("multipart/form-data")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX.toLowerCase(Locale.ROOT) + "ocrstrategy", "non-sense-value")
                 .post(testPDFLowerCaseOCRConfigPOSTBody());
         assertEquals(400, response.getStatus());

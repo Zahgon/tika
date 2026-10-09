@@ -28,38 +28,36 @@ import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.metadata.Metadata;
-import org.apache.tika.server.core.CXFTestBase;
 import org.apache.tika.server.core.TikaServerParseExceptionMapper;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.UnpackerResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.TarWriter;
 import org.apache.tika.server.core.writer.ZipWriter;
 import org.apache.tika.server.standard.config.PDFServerConfig;
 
-public class UnpackerResourceWithConfigTest extends CXFTestBase {
+public class UnpackerResourceWithConfigTest extends TikaServerTestBase {
     private static final String BASE_PATH = "/unpack";
     private static final String ALL_PATH = BASE_PATH + "/all";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(UnpackerResource.class);
-        sf.setResourceProvider(UnpackerResource.class, new SingletonResourceProvider(new UnpackerResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new UnpackerResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TarWriter());
         providers.add(new ZipWriter());
         providers.add(new TikaServerParseExceptionMapper(false));
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Override
@@ -76,7 +74,7 @@ public class UnpackerResourceWithConfigTest extends CXFTestBase {
 
         //default is gray scale png; change to rgb and tiff
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "imageStrategy", "RenderPagesAtPageEnd")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ocrImageType", "rgb")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ocrImageFormatName", "tiff")
@@ -128,7 +126,7 @@ public class UnpackerResourceWithConfigTest extends CXFTestBase {
 
 
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "imageStrategy", "RenderPagesAtPageEnd")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ocrImageType", "gray")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ocrImageFormatName", "jpeg")

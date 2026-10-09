@@ -16,28 +16,19 @@
  */
 package org.apache.tika.server.core.resource;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HEAD;
-import jakarta.ws.rs.OPTIONS;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.Tika;
 import org.apache.tika.server.core.HTMLHelper;
@@ -45,84 +36,60 @@ import org.apache.tika.server.core.HTMLHelper;
 /**
  * <p>Provides a basic welcome to the Apache Tika Server.</p>
  */
-@Path("/")
+@RequestMapping("/")
 public class TikaWelcome {
     private static final String DOCS_URL = "https://wiki.apache.org/tika/TikaJAXRS";
-
-    private static final Map<Class<? extends Annotation>, String> HTTP_METHODS = new HashMap<>();
-
-    static {
-        HTTP_METHODS.put(DELETE.class, "DELETE");
-        HTTP_METHODS.put(GET.class, "GET");
-        HTTP_METHODS.put(HEAD.class, "HEAD");
-        HTTP_METHODS.put(OPTIONS.class, "OPTIONS");
-        HTTP_METHODS.put(POST.class, "POST");
-        HTTP_METHODS.put(PUT.class, "PUT");
-    }
 
     private Tika tika;
     private HTMLHelper html;
     private List<Class<?>> endpoints = new LinkedList<>();
 
-    public TikaWelcome(List<ResourceProvider> rCoreProviders) {
+    /**
+     * @param coreResources the resources to list
+     */
+    public TikaWelcome(List<?> coreResources) {
         this.tika = new Tika(TikaResource.getConfig());
         this.html = new HTMLHelper();
-        for (ResourceProvider rp : rCoreProviders) {
-            this.endpoints.add(rp.getResourceClass());
+        for (Object resource : coreResources) {
+            this.endpoints.add(resource.getClass());
         }
     }
 
+    /**
+     * Lists the endpoints a resource class itself declares: its own class-level path (not an
+     * inherited one) joined with each method's path, the HTTP method and the produced types,
+     * sorted by path and then method name.
+     */
     protected List<Endpoint> identifyEndpoints() {
         List<Endpoint> found = new ArrayList<>();
         for (Class<?> endpoint : endpoints) {
-            Path p = endpoint.getAnnotation(Path.class);
+            RequestMapping p = AnnotatedElementUtils.getMergedAnnotation(endpoint, RequestMapping.class);
             String basePath = null;
-            if (p != null) {
-                basePath = p
-                        .value()
-                        .endsWith("/") ? p
-                        .value()
-                        .substring(0, p
-                                .value()
-                                .length() - 2) : p.value();
+            if (p != null && p.path().length > 0) {
+                String value = p.path()[0];
+                basePath = value.endsWith("/") ? value.substring(0, value.length() - 2) : value;
             }
 
             for (Method m : endpoint.getMethods()) {
-                String httpMethod = null;
-                String methodPath = null;
-                String[] produces = null;
-
-                for (Annotation a : m.getAnnotations()) {
-                    for (Class<? extends Annotation> httpMethAnn : HTTP_METHODS.keySet()) {
-                        if (httpMethAnn.isInstance(a)) {
-                            httpMethod = HTTP_METHODS.get(httpMethAnn);
-                        }
-                    }
-                    if (a instanceof Path) {
-                        methodPath = ((Path) a).value();
-                    }
-                    if (a instanceof Produces) {
-                        produces = ((Produces) a).value();
+                RequestMapping mapping = AnnotatedElementUtils.getMergedAnnotation(m, RequestMapping.class);
+                if (mapping == null || mapping.method().length == 0) {
+                    continue;
+                }
+                String httpMethod = mapping.method()[mapping.method().length - 1].name();
+                String methodPath = mapping.path().length == 0 ? null : mapping.path()[0];
+                String[] produces = mapping.produces();
+                String mPath = basePath;
+                if (mPath == null) {
+                    mPath = "";
+                }
+                if (methodPath != null) {
+                    if (methodPath.startsWith("/")) {
+                        mPath += methodPath;
+                    } else {
+                        mPath += "/" + methodPath;
                     }
                 }
-
-                if (httpMethod != null) {
-                    String mPath = basePath;
-                    if (mPath == null) {
-                        mPath = "";
-                    }
-                    if (methodPath != null) {
-                        if (methodPath.startsWith("/")) {
-                            mPath += methodPath;
-                        } else {
-                            mPath += "/" + methodPath;
-                        }
-                    }
-                    if (produces == null) {
-                        produces = new String[0];
-                    }
-                    found.add(new Endpoint(endpoint, m, mPath, httpMethod, produces));
-                }
+                found.add(new Endpoint(endpoint, m, mPath, httpMethod, produces));
             }
         }
         found.sort(Comparator
@@ -131,8 +98,7 @@ public class TikaWelcome {
         return found;
     }
 
-    @GET
-    @Produces("text/html")
+    @GetMapping(produces = "text/html")
     public String getWelcomeHTML() {
         TikaResource.checkIsOperating();
 
@@ -189,8 +155,7 @@ public class TikaWelcome {
         return h.toString();
     }
 
-    @GET
-    @Produces("text/plain")
+    @GetMapping(produces = "text/plain")
     public String getWelcomePlain() {
         TikaResource.checkIsOperating();
         StringBuilder text = new StringBuilder();

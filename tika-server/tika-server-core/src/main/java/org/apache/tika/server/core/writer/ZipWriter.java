@@ -17,9 +17,6 @@
 package org.apache.tika.server.core.writer;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.UUID;
 import java.util.zip.CRC32;
@@ -27,18 +24,20 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyWriter;
-import jakarta.ws.rs.ext.Provider;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
-@Provider
-@Produces("application/zip")
-public class ZipWriter implements MessageBodyWriter<Map<String, byte[]>> {
+/**
+ * Writes named byte arrays as a zip archive of stored (uncompressed) entries.
+ */
+public class ZipWriter extends AbstractTikaServerWriter<Map<String, byte[]>> {
+
+    public ZipWriter() {
+        super(MediaType.valueOf("application/zip"));
+    }
+
     private static void zipStoreBuffer(ZipArchiveOutputStream zip, String name, byte[] dataBuffer) throws IOException {
         ZipEntry zipEntry = new ZipEntry(name != null ? name : UUID
                 .randomUUID()
@@ -64,17 +63,14 @@ public class ZipWriter implements MessageBodyWriter<Map<String, byte[]>> {
         zip.closeArchiveEntry();
     }
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return Map.class.isAssignableFrom(type);
+    @Override
+    protected boolean supports(Class<?> clazz) {
+        return Map.class.isAssignableFrom(clazz);
     }
 
-    public long getSize(Map<String, byte[]> stringMap, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
-    }
-
-    public void writeTo(Map<String, byte[]> parts, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
-        ZipArchiveOutputStream zip = new ZipArchiveOutputStream(entityStream);
+    @Override
+    protected void writeInternal(Map<String, byte[]> parts, HttpOutputMessage outputMessage) throws IOException {
+        ZipArchiveOutputStream zip = new ZipArchiveOutputStream(outputMessage.getBody());
 
         zip.setMethod(ZipArchiveOutputStream.STORED);
 

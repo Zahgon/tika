@@ -23,30 +23,26 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.DetectorResource;
 import org.apache.tika.server.core.resource.MetadataResource;
 import org.apache.tika.server.core.resource.RecursiveMetadataResource;
 import org.apache.tika.server.core.resource.TikaResource;
 import org.apache.tika.server.core.resource.UnpackerResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.CSVMessageBodyWriter;
 import org.apache.tika.server.core.writer.JSONMessageBodyWriter;
 import org.apache.tika.server.core.writer.MetadataListMessageBodyWriter;
 import org.apache.tika.server.core.writer.TextMessageBodyWriter;
 
-
 /**
  * Test to make sure that no stack traces are returned
  * when the stack trace param is set to false.
  */
-public class StackTraceOffTest extends CXFTestBase {
+public class StackTraceOffTest extends TikaServerTestBase {
 
     private static final String TEST_HELLO_WORLD = "test-documents/mock/hello_world.xml";
     private static final String TEST_NULL = "test-documents/mock/null_pointer.xml";
@@ -57,25 +53,25 @@ public class StackTraceOffTest extends CXFTestBase {
     private static final int UNPROCESSEABLE = 422;
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        List<ResourceProvider> rCoreProviders = new ArrayList<>();
-        rCoreProviders.add(new SingletonResourceProvider(new MetadataResource()));
-        rCoreProviders.add(new SingletonResourceProvider(new RecursiveMetadataResource()));
-        rCoreProviders.add(new SingletonResourceProvider(new DetectorResource(new ServerStatus("", 0))));
-        rCoreProviders.add(new SingletonResourceProvider(new TikaResource()));
-        rCoreProviders.add(new SingletonResourceProvider(new UnpackerResource()));
-        sf.setResourceProviders(rCoreProviders);
+    protected void setUpResources(TikaWebSettings sf) {
+        List<Object> rCoreProviders = new ArrayList<>();
+        rCoreProviders.add(new MetadataResource());
+        rCoreProviders.add(new RecursiveMetadataResource());
+        rCoreProviders.add(new DetectorResource(new ServerStatus("", 0)));
+        rCoreProviders.add(new TikaResource());
+        rCoreProviders.add(new UnpackerResource());
+        sf.getResources().addAll(rCoreProviders);
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TikaServerParseExceptionMapper(false));
         providers.add(new JSONMessageBodyWriter());
         providers.add(new CSVMessageBodyWriter());
         providers.add(new TextMessageBodyWriter());
         providers.add(new MetadataListMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Test
@@ -154,7 +150,7 @@ public class StackTraceOffTest extends CXFTestBase {
         Response response = WebClient
                 .create(endPoint + "/meta" + "/Author")
                 .type("application/mock+xml")
-                .accept(MediaType.TEXT_PLAIN)
+                .accept("text/plain")
                 .put(copy(stream, 100));
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
         String msg = getStringFromInputStream((InputStream) response.getEntity());

@@ -19,40 +19,31 @@ package org.apache.tika.server.core.writer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyWriter;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
-import org.apache.tika.metadata.Metadata;
+/**
+ * Writes a {@link Map} as pretty-printed JSON.
+ */
+public class JSONObjWriter extends AbstractTikaServerWriter<Map<String, Object>> {
 
-@Provider
-@Produces(MediaType.APPLICATION_JSON)
-public class JSONObjWriter implements MessageBodyWriter<Map<String, Object>> {
-
-
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return Map.class.isAssignableFrom(type);
-    }
-
-    public long getSize(Metadata data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
+    public JSONObjWriter() {
+        super(MediaType.APPLICATION_JSON);
     }
 
     @Override
-    public void writeTo(Map<String, Object> map, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
-        try (Writer writer = new OutputStreamWriter(entityStream, UTF_8)) {
+    protected boolean supports(Class<?> clazz) {
+        return Map.class.isAssignableFrom(clazz);
+    }
+
+    @Override
+    protected void writeInternal(Map<String, Object> map, HttpOutputMessage outputMessage) throws IOException {
+        try (Writer writer = new OutputStreamWriter(outputMessage.getBody(), UTF_8)) {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper
                     .writerWithDefaultPrettyPrinter()

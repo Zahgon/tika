@@ -26,16 +26,15 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaServerStatus;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONObjWriter;
 
-public class TikaServerStatusTest extends CXFTestBase {
+public class TikaServerStatusTest extends TikaServerTestBase {
 
     private final static String STATUS_PATH = "/status";
     private final static String SERVER_ID = UUID
@@ -43,16 +42,15 @@ public class TikaServerStatusTest extends CXFTestBase {
             .toString();
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaServerStatus.class);
-        sf.setResourceProvider(TikaServerStatus.class, new SingletonResourceProvider(new TikaServerStatus(new ServerStatus(SERVER_ID, 0))));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaServerStatus(new ServerStatus(SERVER_ID, 0)));
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new JSONObjWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Test

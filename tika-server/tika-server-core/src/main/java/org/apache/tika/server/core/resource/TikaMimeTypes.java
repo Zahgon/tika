@@ -26,11 +26,10 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.mime.MediaType;
@@ -41,13 +40,14 @@ import org.apache.tika.mime.MimeTypes;
 import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.server.core.HTMLHelper;
+import org.apache.tika.server.core.web.HttpStatusException;
 
 /**
  * <p>Provides details of all the mimetypes known to Apache Tika,
  * similar to <em>--list-supported-types</em> with the Tika CLI.
  * <p>Can also provide full details on a single known type.
  */
-@Path("/mime-types")
+@RequestMapping("/mime-types")
 public class TikaMimeTypes {
 
     private HTMLHelper html;
@@ -64,8 +64,7 @@ public class TikaMimeTypes {
         return strings;
     }
 
-    @GET
-    @Produces("text/html")
+    @GetMapping(produces = "text/html")
     public String getMimeTypesHTML() {
         StringBuffer h = new StringBuffer();
         html.generateHeader(h, "Apache Tika Supported Mime Types");
@@ -157,10 +156,8 @@ public class TikaMimeTypes {
         return h.toString();
     }
 
-    @GET
-    @Path("/{type}/{subtype}")
-    @Produces("text/html")
-    public String getMimeTypeDetailsHTML(@PathParam("type") String typePart, @PathParam("subtype") String subtype) {
+    @GetMapping(path = "/{type}/{subtype}", produces = "text/html")
+    public String getMimeTypeDetailsHTML(@PathVariable("type") String typePart, @PathVariable("subtype") String subtype) {
         MediaTypeDetails type = getMediaType(typePart, subtype);
 
         StringBuffer h = new StringBuffer();
@@ -242,8 +239,7 @@ public class TikaMimeTypes {
         return h.toString();
     }
 
-    @GET
-    @Produces(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+    @GetMapping(produces = "application/json")
     public String getMimeTypesJSON() throws IOException {
         Map<String, Object> details = new HashMap<>();
 
@@ -266,10 +262,8 @@ public class TikaMimeTypes {
                 .writeValueAsString(details);
     }
 
-    @GET
-    @Path("/{type}/{subtype}")
-    @Produces(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
-    public String getMimeTypeDetailsJSON(@PathParam("type") String typePart, @PathParam("subtype") String subtype) throws IOException {
+    @GetMapping(path = "/{type}/{subtype}", produces = "application/json")
+    public String getMimeTypeDetailsJSON(@PathVariable("type") String typePart, @PathVariable("subtype") String subtype) throws IOException {
         MediaTypeDetails type = getMediaType(typePart, subtype);
         Map<String, Object> details = new HashMap<>();
 
@@ -319,8 +313,7 @@ public class TikaMimeTypes {
                 .writeValueAsString(details);
     }
 
-    @GET
-    @Produces("text/plain")
+    @GetMapping(produces = "text/plain")
     public String getMimeTypesPlain() {
         StringBuilder text = new StringBuilder();
 
@@ -352,14 +345,14 @@ public class TikaMimeTypes {
         return text.toString();
     }
 
-    protected MediaTypeDetails getMediaType(String type, String subtype) throws NotFoundException {
+    protected MediaTypeDetails getMediaType(String type, String subtype) {
         MediaType mt = MediaType.parse(type + "/" + subtype);
         for (MediaTypeDetails mtd : getMediaTypes()) {
             if (mtd.type.equals(mt)) {
                 return mtd;
             }
         }
-        throw new NotFoundException("No Media Type registered in Tika for " + mt);
+        throw new HttpStatusException("No Media Type registered in Tika for " + mt, HttpStatus.NOT_FOUND);
     }
 
     protected List<MediaTypeDetails> getMediaTypes() {

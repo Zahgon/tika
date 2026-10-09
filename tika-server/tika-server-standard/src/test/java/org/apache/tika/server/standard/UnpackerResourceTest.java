@@ -30,24 +30,23 @@ import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ocr.TesseractOCRParser;
-import org.apache.tika.server.core.CXFTestBase;
 import org.apache.tika.server.core.TikaServerParseExceptionMapper;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.UnpackerResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.TarWriter;
 import org.apache.tika.server.core.writer.ZipWriter;
 import org.apache.tika.server.standard.config.PDFServerConfig;
 
-public class UnpackerResourceTest extends CXFTestBase {
+public class UnpackerResourceTest extends TikaServerTestBase {
     private static final String BASE_PATH = "/unpack";
     private static final String UNPACKER_PATH = BASE_PATH + "";
     private static final String ALL_PATH = BASE_PATH + "/all";
@@ -77,24 +76,23 @@ public class UnpackerResourceTest extends CXFTestBase {
     private static final String CONTENT_TYPE = "Content-type";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(UnpackerResource.class);
-        sf.setResourceProvider(UnpackerResource.class, new SingletonResourceProvider(new UnpackerResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new UnpackerResource());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TarWriter());
         providers.add(new ZipWriter());
         providers.add(new TikaServerParseExceptionMapper(false));
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Test
     public void testDocWAV() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .type(APPLICATION_MSWORD)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOC_WAV));
@@ -108,7 +106,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testDocWAVText() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .type(APPLICATION_MSWORD)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOC_WAV));
@@ -122,7 +120,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testDocPicture() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .type(APPLICATION_MSWORD)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOC_WAV));
@@ -135,7 +133,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testDocPictureNoOle() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .type(APPLICATION_MSWORD)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream("test-documents/2pic.doc"));
@@ -147,7 +145,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testImageDOCX() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOCX_IMAGE));
 
@@ -159,7 +157,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void test204() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .type("xxx/xxx")
                 .accept("*/*")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOC_WAV));
@@ -171,7 +169,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     public void testExeDOCX() throws Exception {
         String TEST_DOCX_EXE = "test-documents/2exe.docx";
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOCX_EXE));
 
@@ -184,7 +182,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testImageXSL() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream("test-documents/pic.xls"));
 
@@ -196,7 +194,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testTarDocPicture() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .type(APPLICATION_MSWORD)
                 .accept("application/x-tar")
                 .put(ClassLoader.getSystemResourceAsStream(TEST_DOC_WAV));
@@ -209,7 +207,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testText() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .header(CONTENT_TYPE, APPLICATION_XML)
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream("test-documents/test.doc"));
@@ -223,7 +221,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testMaxBytes() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .header(CONTENT_TYPE, APPLICATION_XML)
                 .header(UnpackerResource.UNPACK_MAX_BYTES_KEY, 100)
                 .accept("application/zip")
@@ -234,7 +232,7 @@ public class UnpackerResourceTest extends CXFTestBase {
     @Test
     public void testPDFImages() throws Exception {
         Response response = WebClient
-                .create(CXFTestBase.endPoint + UNPACKER_PATH)
+                .create(TikaServerTestBase.endPoint + UNPACKER_PATH)
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ExtractInlineImages", "true")
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream("test-documents/testOCR.pdf"));
@@ -253,19 +251,19 @@ public class UnpackerResourceTest extends CXFTestBase {
         assumeTrue(new TesseractOCRParser().hasTesseract());
 
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ocrStrategy", "ocr_only")
                 .accept("application/zip")
                 .put(ClassLoader.getSystemResourceAsStream("test-documents/testOCR.pdf"));
         String txt = readArchiveText((InputStream) response.getEntity());
-        CXFTestBase.assertContains("Happy New Year", txt);
+        TikaServerTestBase.assertContains("Happy New Year", txt);
     }
 
     @Test
     public void testPDFPerPageRenderColor() throws Exception {
 
         Response response = WebClient
-                .create(CXFTestBase.endPoint + ALL_PATH)
+                .create(TikaServerTestBase.endPoint + ALL_PATH)
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "imageStrategy", "RenderPagesAtPageEnd")
                 .header(PDFServerConfig.X_TIKA_PDF_HEADER_PREFIX + "ocrImageType", "rgb")
                 .accept("application/zip")

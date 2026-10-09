@@ -19,54 +19,45 @@ package org.apache.tika.server.core.writer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.MessageBodyWriter;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.server.core.web.HttpStatusException;
 
 /**
- * Returns simple text string for a particular metadata value.
- * This assumes that the metadata object only has one key;
- * if there is more than one key or no keys, this will throw a webapp exception.
- * <p/>
- * This will choose the first value returned for the one key.
+ * Writes the value of a single-entry {@link Metadata} as plain text, for exactly
+ * <code>text/plain</code>.
  */
-@Provider
-@Produces(MediaType.TEXT_PLAIN)
-public class TextMessageBodyWriter implements MessageBodyWriter<Metadata> {
+public class TextMessageBodyWriter extends AbstractTikaServerWriter<Metadata> {
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return mediaType.equals(MediaType.TEXT_PLAIN_TYPE) && Metadata.class.isAssignableFrom(type);
+    public TextMessageBodyWriter() {
+        super(MediaType.TEXT_PLAIN);
     }
 
-    public long getSize(Metadata data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
+    @Override
+    protected boolean supports(Class<?> clazz) {
+        return Metadata.class.isAssignableFrom(clazz);
+    }
+
+    @Override
+    public boolean canWrite(Class<?> clazz, MediaType mediaType) {
+        return MediaType.TEXT_PLAIN.equals(mediaType) && supports(clazz);
     }
 
     @Override
     @SuppressWarnings("resource")
-    public void writeTo(Metadata metadata, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
-
+    protected void writeInternal(Metadata metadata, HttpOutputMessage outputMessage) throws IOException {
         if (metadata.names().length != 1) {
-            throw new WebApplicationException("Metadata object must only have one entry!");
+            throw new HttpStatusException("Metadata object must only have one entry!");
         }
-        Writer writer = new OutputStreamWriter(entityStream, UTF_8);
-
+        Writer writer = new OutputStreamWriter(outputMessage.getBody(), UTF_8);
         for (String name : metadata.names()) {
             writer.write(metadata.get(name));
         }
-
         // Don't close, just flush the stream
         writer.flush();
     }

@@ -19,14 +19,13 @@ package org.apache.tika.server.core;
 import java.util.Arrays;
 import java.util.List;
 
-import jakarta.ws.rs.core.MediaType;
-import org.apache.cxf.jaxrs.ext.ResourceComparator;
-import org.apache.cxf.jaxrs.model.ClassResourceInfo;
-import org.apache.cxf.jaxrs.model.OperationResourceInfo;
-import org.apache.cxf.jaxrs.utils.JAXRSUtils;
-import org.apache.cxf.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.tika.server.core.web.MediaTypes;
+import org.apache.tika.server.core.web.ResourceComparator;
+import org.apache.tika.server.core.web.ResourceModel.ResourceMethod;
+import org.apache.tika.server.core.web.WebMediaType;
 
 /**
  * Resource comparator based to produce type.
@@ -39,71 +38,32 @@ public class ProduceTypeResourceComparator implements ResourceComparator {
      * The lower in list (higher index value), the higher priority it has.
      * In case of no matching in this list, it will be treated as media type all.
      */
-    public static final List<MediaType> PRIORITIZED_MEDIA_LIST =
-            Arrays.asList(MediaType.TEXT_PLAIN_TYPE, MediaType.APPLICATION_JSON_TYPE, MediaType.TEXT_HTML_TYPE, MediaType.TEXT_XML_TYPE);
+    public static final List<WebMediaType> PRIORITIZED_MEDIA_LIST =
+            Arrays.asList(WebMediaType.TEXT_PLAIN_TYPE, WebMediaType.APPLICATION_JSON_TYPE, WebMediaType.TEXT_HTML_TYPE, WebMediaType.TEXT_XML_TYPE);
     /**
      * The logger
      */
     private static final Logger LOG = LoggerFactory.getLogger(ProduceTypeResourceComparator.class);
 
     /**
-     * Initiates the comparator.
-     * Currently, no op.
-     */
-    public ProduceTypeResourceComparator() {
-    }
-
-    /**
-     * Compares the class to handle.
-     * Nothing is handled here, and this is handed over to CXF default logic.
-     *
-     * @param cri1    the first class resource info.
-     * @param cri2    the second class resource info.
-     * @param message the message, for comparison context.
-     * @return value based on chosen class. (Always 0 is returned)
-     */
-    @Override
-    public int compare(ClassResourceInfo cri1, ClassResourceInfo cri2, Message message) {
-        return 0;
-    }
-
-    /**
      * Compares the method to handle.
      * Gets the maximum priority match for both handlers,
      * and chooses the handler that has the maximum priority match.
      *
-     * @param oper1   the first resource handler info.
-     * @param oper2   the second resource handler info.
-     * @param message the message, for comparison context.
+     * @param oper1       the first resource handler info.
+     * @param oper2       the second resource handler info.
+     * @param acceptTypes the acceptable response media types of the request, best first.
      * @return value based on chosen handler. Returns -1 if first, 1 if second and 0 if no decision.
      */
     @Override
-    public int compare(OperationResourceInfo oper1, OperationResourceInfo oper2, Message message) {
-        // getting all message context data
-        final String httpMethod = (String) message.get(Message.HTTP_REQUEST_METHOD);
-        final MediaType contentType = JAXRSUtils.toMediaType((String) message.get(Message.CONTENT_TYPE));
-        final List<MediaType> acceptTypes = JAXRSUtils.parseMediaTypes((String) message.get(Message.ACCEPT_CONTENT_TYPE));
-
-        LOG.debug("Message Method : " + httpMethod + ", ContentType : " + contentType + ", " + "Accept Types : " + acceptTypes);
+    public int compare(ResourceMethod oper1, ResourceMethod oper2, List<WebMediaType> acceptTypes) {
+        LOG.debug("Accept Types : {}", acceptTypes);
 
         int result = compareProduceTypes(oper1, oper2, acceptTypes);
 
-        String m1Name = oper1
-                .getClassResourceInfo()
-                .getServiceClass()
-                .getName() + "#" + oper1
-                .getMethodToInvoke()
-                .getName();
-        String m2Name = oper2
-                .getClassResourceInfo()
-                .getServiceClass()
-                .getName() + "#" + oper2
-                .getMethodToInvoke()
-                .getName();
-
         if (result != 0) {
-            String chosen = result == -1 ? m1Name : m2Name;
-            LOG.debug("Between " + m1Name + " and " + m2Name + ", " + chosen + " is chosen for handling the current request");
+            String chosen = result == -1 ? oper1.getName() : oper2.getName();
+            LOG.debug("Between {} and {}, {} is chosen for handling the current request", oper1.getName(), oper2.getName(), chosen);
         }
 
         return result;
@@ -119,11 +79,11 @@ public class ProduceTypeResourceComparator implements ResourceComparator {
      * @param acceptTypes the list acceptable response mime type, for the message.
      * @return value based on chosen handler. Returns -1 if first, 1 if second and 0 if no decision.
      */
-    private int compareProduceTypes(OperationResourceInfo oper1, OperationResourceInfo oper2, final List<MediaType> acceptTypes) {
+    private int compareProduceTypes(ResourceMethod oper1, ResourceMethod oper2, final List<WebMediaType> acceptTypes) {
         // getting matched produce type for both handlers.
         // this is required if a method can produce multiple types.
-        List<MediaType> op1Matched = JAXRSUtils.intersectMimeTypes(acceptTypes, oper1.getProduceTypes(), true);
-        List<MediaType> op2Matched = JAXRSUtils.intersectMimeTypes(acceptTypes, oper2.getProduceTypes(), true);
+        List<WebMediaType> op1Matched = MediaTypes.intersectMimeTypes(acceptTypes, oper1.getProduceTypes(), true);
+        List<WebMediaType> op2Matched = MediaTypes.intersectMimeTypes(acceptTypes, oper2.getProduceTypes(), true);
 
         // calculate the max priority for both handlers
         int oper1Priority = op1Matched

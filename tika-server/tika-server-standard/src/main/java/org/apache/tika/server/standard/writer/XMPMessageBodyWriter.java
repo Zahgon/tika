@@ -22,37 +22,39 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.ext.Provider;
+import org.springframework.http.HttpOutputMessage;
+import org.springframework.http.MediaType;
 
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
-import org.apache.tika.server.core.writer.TikaServerWriter;
+import org.apache.tika.server.core.writer.AbstractTikaServerWriter;
 import org.apache.tika.xmp.XMPMetadata;
 
-@Provider
-@Produces("application/rdf+xml")
-public class XMPMessageBodyWriter implements TikaServerWriter<Metadata> {
+/**
+ * Writes {@link Metadata} as XMP, for exactly <code>application/rdf+xml</code>.
+ */
+public class XMPMessageBodyWriter extends AbstractTikaServerWriter<Metadata> {
 
-    private static MediaType RDF_XML = MediaType.valueOf("application/rdf+xml");
+    private static final MediaType RDF_XML = MediaType.valueOf("application/rdf+xml");
 
-    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return mediaType.equals(RDF_XML) && Metadata.class.isAssignableFrom(type);
-    }
-
-    public long getSize(Metadata data, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
+    public XMPMessageBodyWriter() {
+        super(RDF_XML);
     }
 
     @Override
-    public void writeTo(Metadata metadata, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
-                        OutputStream entityStream) throws IOException, WebApplicationException {
+    protected boolean supports(Class<?> clazz) {
+        return Metadata.class.isAssignableFrom(clazz);
+    }
+
+    @Override
+    public boolean canWrite(Class<?> clazz, MediaType mediaType) {
+        return RDF_XML.equals(mediaType) && supports(clazz);
+    }
+
+    @Override
+    protected void writeInternal(Metadata metadata, HttpOutputMessage outputMessage) throws IOException {
+        OutputStream entityStream = outputMessage.getBody();
         try {
             Writer writer = new OutputStreamWriter(entityStream, UTF_8);
             XMPMetadata xmp = new XMPMetadata(metadata);

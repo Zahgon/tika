@@ -30,14 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.io.FilenameUtils;
@@ -48,6 +40,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -65,8 +60,10 @@ import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.BodyContentHandler;
 import org.apache.tika.sax.RichTextContentHandler;
+import org.apache.tika.server.core.web.HttpStatusException;
+import org.apache.tika.server.core.web.RequestContext;
 
-@Path("/unpack")
+@RequestMapping("/unpack")
 public class UnpackerResource {
     public static final String TEXT_FILENAME = "__TEXT__";
     public static final String META_FILENAME = "__METADATA__";
@@ -89,26 +86,22 @@ public class UnpackerResource {
         }
     }
 
-    @Path("/{id:(/.*)?}")
-    @PUT
-    @Produces({"application/zip", "application/x-tar"})
-    public Map<String, byte[]> unpack(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info) throws Exception {
-        return process(TikaResource.getInputStream(is, new Metadata(), httpHeaders, info), httpHeaders, info, false);
+    @PutMapping(path = "/{id:(/.*)?}", produces = {"application/zip", "application/x-tar"})
+    public Map<String, byte[]> unpack(InputStream is, RequestContext request) throws Exception {
+        return process(TikaResource.getInputStream(is, new Metadata(), request), request, false);
     }
 
-    @Path("/all{id:(/.*)?}")
-    @PUT
-    @Produces({"application/zip", "application/x-tar"})
-    public Map<String, byte[]> unpackAll(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info) throws Exception {
-        return process(TikaResource.getInputStream(is, new Metadata(), httpHeaders, info), httpHeaders, info, true);
+    @PutMapping(path = "/all{id:(/.*)?}", produces = {"application/zip", "application/x-tar"})
+    public Map<String, byte[]> unpackAll(InputStream is, RequestContext request) throws Exception {
+        return process(TikaResource.getInputStream(is, new Metadata(), request), request, true);
     }
 
-    private Map<String, byte[]> process(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info, boolean saveAll) throws Exception {
+    private Map<String, byte[]> process(InputStream is, RequestContext request, boolean saveAll) throws Exception {
         Metadata metadata = new Metadata();
         ParseContext pc = new ParseContext();
         long unpackMaxBytes = DEFAULT_MAX_ATTACHMENT_BYTES;
-        String unpackMaxBytesString = httpHeaders
-                .getRequestHeaders()
+        String unpackMaxBytesString = request
+                .getHeaders()
                 .getFirst(UNPACK_MAX_BYTES_KEY);
         if (!StringUtils.isBlank(unpackMaxBytesString)) {
             unpackMaxBytes = Long.parseLong(unpackMaxBytesString);
@@ -123,8 +116,8 @@ public class UnpackerResource {
             //no need to digest for unwrapping
             parser = ((DigestingParser) parser).getWrappedParser();
         }
-        fillMetadata(parser, metadata, httpHeaders.getRequestHeaders());
-        fillParseContext(httpHeaders.getRequestHeaders(), metadata, pc);
+        fillMetadata(parser, metadata, request.getHeaders());
+        fillParseContext(request.getHeaders(), metadata, pc);
 
         TikaResource.logRequest(LOG, "/unpack", metadata);
         //even though we aren't currently parsing embedded documents,
@@ -146,10 +139,10 @@ public class UnpackerResource {
 
         pc.set(EmbeddedDocumentExtractor.class, new MyEmbeddedDocumentExtractor(count, files, unpackMaxBytes));
 
-        TikaResource.parse(parser, LOG, info.getPath(), is, ch, metadata, pc);
+        TikaResource.parse(parser, LOG, request.getPath(), is, ch, metadata, pc);
 
         if (count.intValue() == 0 && !saveAll) {
-            throw new WebApplicationException(Response.Status.NO_CONTENT);
+            throw new HttpStatusException(HttpStatus.NO_CONTENT);
         }
 
         if (saveAll) {

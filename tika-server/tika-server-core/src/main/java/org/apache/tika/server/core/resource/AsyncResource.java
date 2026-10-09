@@ -26,21 +26,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.xml.sax.SAXException;
 
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.pipes.FetchEmitTuple;
 import org.apache.tika.pipes.async.AsyncProcessor;
@@ -50,8 +44,9 @@ import org.apache.tika.pipes.emitter.EmitterManager;
 import org.apache.tika.pipes.extractor.EmbeddedDocumentBytesConfig;
 import org.apache.tika.pipes.fetcher.FetchKey;
 import org.apache.tika.serialization.pipes.JsonFetchEmitTupleList;
+import org.apache.tika.server.core.web.HttpStatusException;
 
-@Path("/async")
+@RequestMapping("/async")
 public class AsyncResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(AsyncResource.class);
@@ -88,13 +83,11 @@ public class AsyncResource {
      * <p>
      * Must specify a fetcherString and an emitter in the posted json.
      *
-     * @param info uri info
      * @return InputStream that can be deserialized as a list of {@link Metadata} objects
      * @throws Exception
      */
-    @POST
-    @Produces("application/json")
-    public Map<String, Object> post(InputStream is, @Context HttpHeaders httpHeaders, @Context UriInfo info) throws Exception {
+    @PostMapping(produces = "application/json")
+    public Map<String, Object> post(InputStream is) throws Exception {
 
         AsyncRequest request = deserializeASyncRequest(is);
 
@@ -172,11 +165,11 @@ public class AsyncResource {
     }
 
     private Map<String, Object> badEmitter(String emitterName) {
-        throw new BadRequestException("can't find emitter for " + emitterName);
+        throw new HttpStatusException("can't find emitter for " + emitterName, HttpStatus.BAD_REQUEST);
     }
 
     private Map<String, Object> badFetcher(FetchKey fetchKey) {
-        throw new BadRequestException("can't find fetcher for " + fetchKey.getFetcherName());
+        throw new HttpStatusException("can't find fetcher for " + fetchKey.getFetcherName(), HttpStatus.BAD_REQUEST);
     }
 
     private AsyncRequest deserializeASyncRequest(InputStream is) throws IOException {

@@ -14,32 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.tika.server.core;
-
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-
-import org.apache.cxf.common.logging.AbstractDelegatingLogger;
+package org.apache.tika.server.core.client;
 
 /**
- * null logger to swallow client messages
- * in {@link TikaServerIntegrationTest}
+ * The request could not be sent or its response not read.
  */
-public class NullWebClientLogger extends AbstractDelegatingLogger {
+public class ProcessingException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
 
-    public NullWebClientLogger(String name, String resourceBundleName) {
-        super(name, resourceBundleName);
+    public ProcessingException(Throwable cause) {
+        super(cause);
     }
-
-    @Override
-    public Level getLevel() {
-        return Level.OFF;
-    }
-
-    @Override
-    protected void internalLogFormatted(String s, LogRecord logRecord) {
-
-    }
-
 }

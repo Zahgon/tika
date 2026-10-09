@@ -16,7 +16,7 @@
  */
 package org.apache.tika.server.core.config;
 
-import jakarta.ws.rs.core.MultivaluedMap;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.config.TikaTaskTimeout;
 import org.apache.tika.metadata.Metadata;
@@ -28,7 +28,7 @@ public class TimeoutConfig implements ParseContextConfig {
     public static final String X_TIKA_TIMEOUT_MILLIS = "X-Tika-Timeout-Millis";
 
     @Override
-    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata, ParseContext context) {
+    public void configure(MultiValueMap<String, String> httpHeaders, Metadata metadata, ParseContext context) {
         if (httpHeaders.containsKey(X_TIKA_TIMEOUT_MILLIS)) {
             long timeout = Long.parseLong(httpHeaders.getFirst(X_TIKA_TIMEOUT_MILLIS));
             context.set(TikaTaskTimeout.class, new TikaTaskTimeout(timeout));

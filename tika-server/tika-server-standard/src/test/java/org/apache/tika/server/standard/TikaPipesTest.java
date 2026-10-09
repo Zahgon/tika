@@ -37,12 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.FileUtils;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.ResourceProvider;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,11 +57,14 @@ import org.apache.tika.pipes.fetcher.FetcherManager;
 import org.apache.tika.sax.BasicContentHandlerFactory;
 import org.apache.tika.serialization.JsonMetadataList;
 import org.apache.tika.serialization.pipes.JsonFetchEmitTuple;
-import org.apache.tika.server.core.CXFTestBase;
 import org.apache.tika.server.core.FetcherStreamFactory;
 import org.apache.tika.server.core.InputStreamFactory;
 import org.apache.tika.server.core.TikaServerParseExceptionMapper;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.PipesResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONObjWriter;
 import org.apache.tika.utils.ProcessUtils;
 
@@ -74,7 +72,7 @@ import org.apache.tika.utils.ProcessUtils;
  * This offers basic integration tests with fetchers and emitters.
  * We use file system fetchers and emitters.
  */
-public class TikaPipesTest extends CXFTestBase {
+public class TikaPipesTest extends TikaServerTestBase {
 
     private static final String PIPES_PATH = "/pipes";
     private static final String TEST_RECURSIVE_DOC = "test_recursive_embedded.docx";
@@ -128,22 +126,22 @@ public class TikaPipesTest extends CXFTestBase {
     }
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        List<ResourceProvider> rCoreProviders = new ArrayList<>();
+    protected void setUpResources(TikaWebSettings sf) {
+        List<Object> rCoreProviders = new ArrayList<>();
         try {
-            rCoreProviders.add(new SingletonResourceProvider(new PipesResource(TIKA_CONFIG_PATH)));
+            rCoreProviders.add(new PipesResource(TIKA_CONFIG_PATH));
         } catch (IOException | TikaConfigException e) {
             throw new RuntimeException(e);
         }
-        sf.setResourceProviders(rCoreProviders);
+        sf.getResources().addAll(rCoreProviders);
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new TikaServerParseExceptionMapper(true));
         providers.add(new JSONObjWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Override

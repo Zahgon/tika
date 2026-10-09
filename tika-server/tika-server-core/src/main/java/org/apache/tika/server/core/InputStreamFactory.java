@@ -19,10 +19,8 @@ package org.apache.tika.server.core;
 import java.io.IOException;
 import java.io.InputStream;
 
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.UriInfo;
-
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.server.core.web.RequestContext;
 
 /**
  * Interface to allow for custom/consistent creation of InputStream
@@ -32,6 +30,13 @@ import org.apache.tika.metadata.Metadata;
  */
 public interface InputStreamFactory {
 
-    InputStream getInputStream(InputStream is, Metadata metadata, HttpHeaders httpHeaders, UriInfo uriInfo) throws IOException;
+    /**
+     * @param is       the request body
+     * @param metadata the metadata of the document
+     * @param request  the request's headers, path and query
+     * @return the stream to parse
+     * @throws IOException when the stream cannot be opened
+     */
+    InputStream getInputStream(InputStream is, Metadata metadata, RequestContext request) throws IOException;
 
 }

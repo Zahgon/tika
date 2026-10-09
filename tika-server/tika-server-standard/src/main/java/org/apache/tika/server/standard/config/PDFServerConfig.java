@@ -21,8 +21,8 @@ import static org.apache.tika.server.core.resource.TikaResource.processHeaderCon
 import java.util.List;
 import java.util.Map;
 
-import jakarta.ws.rs.core.MultivaluedMap;
 import org.apache.commons.lang3.Strings;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
@@ -48,7 +48,7 @@ public class PDFServerConfig implements ParseContextConfig {
      * @param parseContext the parse context to configure.
      */
     @Override
-    public void configure(MultivaluedMap<String, String> httpHeaders, Metadata metadata, ParseContext parseContext) {
+    public void configure(MultiValueMap<String, String> httpHeaders, Metadata metadata, ParseContext parseContext) {
         //lazily initialize configs
         //if a header is submitted, any params set in --tika-config tika-config.xml
         //upon server startup will be ignored.

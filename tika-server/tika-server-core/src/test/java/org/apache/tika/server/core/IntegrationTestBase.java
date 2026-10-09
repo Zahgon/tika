@@ -28,9 +28,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.common.logging.LogUtils;
-import org.apache.cxf.jaxrs.client.WebClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,6 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.tika.TikaTest;
+import org.apache.tika.server.core.client.ProcessingException;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 
 public class IntegrationTestBase extends TikaTest {
 
@@ -65,8 +65,6 @@ public class IntegrationTestBase extends TikaTest {
 
     @BeforeAll
     public static void staticSetup() throws Exception {
-        LogUtils.setLoggerClass(NullWebClientLogger.class);
-
         LOG_FILE = Files.createTempFile(TEMP_WORKING_DIR, "tika-server-integration", ".xml");
         Files.copy(TikaServerIntegrationTest.class.getResourceAsStream("/logging/log4j2_forked.xml"), LOG_FILE, StandardCopyOption.REPLACE_EXISTING);
         STREAMS_DIR = Files.createTempDirectory(TEMP_WORKING_DIR, "tika-server-integration");
@@ -121,7 +119,7 @@ public class IntegrationTestBase extends TikaTest {
                 }
                 LOG.debug("tika test client failed to connect to server with status: {}", response.getStatus());
 
-            } catch (jakarta.ws.rs.ProcessingException e) {
+            } catch (ProcessingException e) {
                 LOG.debug("tika test client failed to connect to server", e);
             }
 

@@ -18,27 +18,25 @@ package org.apache.tika.server.core;
 
 import java.io.InputStream;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.TikaMimeTypes;
+import org.apache.tika.server.core.web.TikaWebSettings;
 
-public class TikaMimeTypesTest extends CXFTestBase {
+public class TikaMimeTypesTest extends TikaServerTestBase {
 
 
     private static final String MIMETYPES_PATH = "/mime-types";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(TikaMimeTypes.class);
-        sf.setResourceProvider(TikaMimeTypes.class, new SingletonResourceProvider(new TikaMimeTypes()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new TikaMimeTypes());
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
     }
 
     @Test

@@ -25,10 +25,6 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.ws.rs.core.Response;
-import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.jaxrs.lifecycle.SingletonResourceProvider;
 import org.junit.jupiter.api.Test;
 
 import org.apache.tika.metadata.Metadata;
@@ -36,32 +32,34 @@ import org.apache.tika.metadata.OfficeOpenXMLExtended;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.serialization.JsonMetadata;
 import org.apache.tika.serialization.JsonMetadataList;
-import org.apache.tika.server.core.CXFTestBase;
+import org.apache.tika.server.core.TikaServerTestBase;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.server.core.resource.RecursiveMetadataResource;
 import org.apache.tika.server.core.resource.TikaResource;
+import org.apache.tika.server.core.web.TikaWebSettings;
 import org.apache.tika.server.core.writer.JSONMessageBodyWriter;
 import org.apache.tika.server.core.writer.MetadataListMessageBodyWriter;
 
-public class OpenNLPMetadataFilterTest extends CXFTestBase {
+public class OpenNLPMetadataFilterTest extends TikaServerTestBase {
 
     private static final String TIKA_PATH = "/tika";
     private static final String META_PATH = "/rmeta";
     private static final String TEST_RECURSIVE_DOC = "test-documents/test_recursive_embedded.docx";
 
     @Override
-    protected void setUpResources(JAXRSServerFactoryBean sf) {
-        sf.setResourceClasses(RecursiveMetadataResource.class, TikaResource.class);
-        sf.setResourceProvider(RecursiveMetadataResource.class, new SingletonResourceProvider(new RecursiveMetadataResource()));
-        sf.setResourceProvider(TikaResource.class, new SingletonResourceProvider(new TikaResource()));
+    protected void setUpResources(TikaWebSettings sf) {
+        sf.getResources().add(new RecursiveMetadataResource());
+        sf.getResources().add(new TikaResource());
 
     }
 
     @Override
-    protected void setUpProviders(JAXRSServerFactoryBean sf) {
+    protected void setUpProviders(TikaWebSettings sf) {
         List<Object> providers = new ArrayList<>();
         providers.add(new MetadataListMessageBodyWriter());
         providers.add(new JSONMessageBodyWriter());
-        sf.setProviders(providers);
+        addProviders(sf, providers);
     }
 
     @Override

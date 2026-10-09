@@ -16,7 +16,7 @@
  */
 package org.apache.tika.server.core;
 
-import jakarta.ws.rs.core.MultivaluedMap;
+import org.springframework.util.MultiValueMap;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
@@ -36,5 +36,5 @@ public interface ParseContextConfig {
      * @param metadata the metadata.
      * @param context  the parse context to configure.
      */
-    void configure(MultivaluedMap<String, String> headers, Metadata metadata, ParseContext context);
+    void configure(MultiValueMap<String, String> headers, Metadata metadata, ParseContext context);
 }

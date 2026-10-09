@@ -23,9 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.apache.tika.detect.CompositeDetector;
 import org.apache.tika.detect.Detector;
@@ -35,7 +34,7 @@ import org.apache.tika.server.core.HTMLHelper;
  * <p>Provides details of all the {@link Detector}s registered with
  * Apache Tika, similar to <em>--list-detectors</em> with the Tika CLI.
  */
-@Path("/detectors")
+@RequestMapping("/detectors")
 public class TikaDetectors {
 
     private HTMLHelper html;
@@ -44,8 +43,7 @@ public class TikaDetectors {
         this.html = new HTMLHelper();
     }
 
-    @GET
-    @Produces("text/html")
+    @GetMapping(produces = "text/html")
     public String getDectorsHTML() {
         StringBuffer h = new StringBuffer();
         html.generateHeader(h, "Detectors available to Apache Tika");
@@ -78,8 +76,7 @@ public class TikaDetectors {
         }
     }
 
-    @GET
-    @Produces(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
+    @GetMapping(produces = "application/json")
     public String getDetectorsJSON() throws IOException {
         Map<String, Object> details = new HashMap<>();
         detectorAsMap(TikaResource
@@ -106,8 +103,7 @@ public class TikaDetectors {
         }
     }
 
-    @GET
-    @Produces("text/plain")
+    @GetMapping(produces = "text/plain")
     public String getDetectorsPlain() {
         StringBuffer text = new StringBuffer();
         renderDetector(TikaResource

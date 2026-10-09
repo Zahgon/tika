@@ -16,7 +16,6 @@
  */
 package org.apache.tika.server.core;
 
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,10 +30,7 @@ import java.nio.file.Path;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.ProcessingException;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.FileUtils;
-import org.apache.cxf.jaxrs.client.WebClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +45,9 @@ import org.apache.tika.pipes.HandlerConfig;
 import org.apache.tika.pipes.emitter.EmitKey;
 import org.apache.tika.pipes.fetcher.FetchKey;
 import org.apache.tika.serialization.pipes.JsonFetchEmitTuple;
+import org.apache.tika.server.core.client.ProcessingException;
+import org.apache.tika.server.core.client.Response;
+import org.apache.tika.server.core.client.WebClient;
 import org.apache.tika.utils.ProcessUtils;
 
 public class TikaServerPipesIntegrationTest extends IntegrationTestBase {
